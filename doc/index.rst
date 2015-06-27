@@ -1,5 +1,5 @@
-Labtronyx
-=========
+Labtronyx GUI
+=============
 
 The Labtronyx project is a instrument control and automation framework. It
 features a robust core for simplifying communication with laboratory instruments
@@ -8,20 +8,8 @@ tests and experiments. Labtronyx is developed in Python to take advantage of the
 powerful and vast collection of libraries, as well as to provide an easy to
 learn environment in which to develop.
 
-The goals of the Labtronyx project are:
-
-   - Provide a framework for instrumentation that is easier to use (and cheaper)
-     than MATLAB or LabVIEW.
-     
-   - Compatibility with any instrument from any vendor using any protocol.
-   
-   - Compatibility with Windows, Mac and Linux.
-   
-   - Powerful, object-oriented architecture that is flexible and easy to develop
-   
-Labtronyx is all you need to develop robust scripts and applications for
-automation. With this framework, you will no longer have to worry about 
-interfaces and protocols.
+The goals of the Labtronyx project can be found on the `Labtronyx GitHub page <http://github.com/protonyx/labtronyx>`_ .
+This user guide will provide instruction on the use of the Labtronyx Graphical User Interface (GUI).
 
 User Guide
 ----------
@@ -46,10 +34,3 @@ Indices and tables
 
 .. toctree::
    :hidden:
-   
-   installation
-   application/index
-   api/index
-   instruments/index
-   developers/index
-   
