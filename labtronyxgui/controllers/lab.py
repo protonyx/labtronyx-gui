@@ -6,17 +6,6 @@ class LabManagerController(object):
 
 
     def __init__(self):
-        self._fields = {
-            'hosts': {
-                'getter': 'listManagers',
-            },
-            'resources': {
-                'getter': 'listResources'
-            }
-        }
-
-        self._data = {}
-
         self.model = labtronyx.LabManager()
 
     def add_host(self, hostname, port):

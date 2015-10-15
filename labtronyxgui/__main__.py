@@ -13,13 +13,19 @@ def main(args=None):
         # main_gui.mainloop()
 
         import wx
+        app = wx.App()
 
         import controllers.lab
         controller = controllers.lab.LabManagerController()
 
         import views.wx_main
         view = views.wx_main.MainView(controller)
-        view.run()
+
+        app.SetTopWindow(view.frame)
+        app.MainLoop()
 
     except Exception as e:
         raise EnvironmentError("Unable to load labtronyx-gui")
+
+if __name__ == '__main__':
+    main()
