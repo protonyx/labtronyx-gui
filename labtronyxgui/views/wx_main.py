@@ -38,6 +38,8 @@ class MainView(object):
         self.tree.SetColumnWidth(0, 175)
         self.node_root = self.tree.AddRoot("Labtronyx") # Add hidden root item
         self.tree.SetPyData(self.node_root, None)
+        self.nodes_hosts = {}
+        self.nodes_resources = {}
 
         # Add items?
         for x in range(5):
@@ -47,6 +49,9 @@ class MainView(object):
             for y in range(5):
                 subchild = self.tree.AppendItem(child, "Subitem %d" % y)
                 self.tree.SetPyData(subchild, y)
+
+        # Update tree
+        self.update_tree()
 
         # self.tree.Expand(self.node_root)
 
@@ -61,6 +66,36 @@ class MainView(object):
 
     def e_MenuExit(self, event):
         self.frame.Close(True)
+
+    def update_tree(self):
+        all_hosts = self._controller.list_hosts()
+
+        # Hosts
+        for ip_address in all_hosts:
+            # Add new hosts
+            if ip_address not in self.nodes_hosts:
+                hostname = self._controller.networkHostname(ip_address)
+
+                child = self.tree.AppendItem(self.node_root, hostname)
+                self.tree.SetPyData(child, ip_address)
+                self.nodes_hosts[ip_address] = child
+
+                self.tree.Expand(child)
+
+            host_node = self.nodes_hosts.get(ip_address)
+
+            # Resources
+            for res_uuid in self._controller.list_resources(ip_address):
+                # Add new resources
+                if res_uuid not in self.nodes_resources:
+                    res_prop = self._controller.get_resource_properties(res_uuid)
+
+                    # Resource Name
+                    node_name = res_prop.get('resourceID')
+
+                    child = self.tree.AppendItem(host_node, node_name)
+                    self.tree.SetPyData(child, res_uuid)
+                    self.nodes_resources[res_uuid] = child
 
     def handle_event(self, event, *args):
         pass

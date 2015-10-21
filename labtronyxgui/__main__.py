@@ -15,8 +15,8 @@ def main(args=None):
         import wx
         app = wx.App()
 
-        import controllers.lab
-        controller = controllers.lab.LabManagerController()
+        import controllers.main
+        controller = controllers.main.MainApplicationController()
 
         import views.wx_main
         view = views.wx_main.MainView(controller)
@@ -25,6 +25,7 @@ def main(args=None):
         app.MainLoop()
 
     except Exception as e:
+        raise
         raise EnvironmentError("Unable to load labtronyx-gui")
 
 if __name__ == '__main__':
