@@ -1,34 +1,64 @@
 import wx
 import wx.gizmos
 
-class MainView(object):
+from labtronyx.common import events
+
+class MainApp(wx.App):
+    pass
+
+class MainView(wx.Frame):
 
     def __init__(self, controller):
+        wx.Frame.__init__(self, parent=None, id=-1, title="Labtronyx", size=(640, 480),
+                          style=wx.DEFAULT_FRAME_STYLE)
         self._controller = controller
 
-        self.frame = wx.Frame(parent=None, id=-1,
-                              title="Labtronyx",
-                              size=(640, 480),
-                              style=wx.DEFAULT_FRAME_STYLE)
         # self.sizer = wx.BoxSizer(wx.VERTICAL)
         # self.frame.SetSizer(self.sizer)
 
-        # Build Menubar
-        self.menubar = wx.MenuBar()
-        self.menu_file = wx.Menu()
-        item = self.menu_file.Append(-1, "E&xit\tCtrl-Q", "Exit")
-        self.frame.Bind(wx.EVT_MENU, self.e_MenuExit, item)
-        self.menubar.Append(self.menu_file, "&File")
-        self.frame.SetMenuBar(self.menubar)
+        # Build Menu
+        self.buildMenubar()
 
-        self.panel = wx.Panel(parent=self.frame, id=wx.ID_ANY,
-                              style=wx.WANTS_CHARS)
-        self.panel.Bind(wx.EVT_SIZE, self.e_OnSize)
-
-        # Build frame
-        self.tree = wx.gizmos.TreeListCtrl(parent=self.panel, id=wx.ID_ANY,
+        # Build Tree
+        self.treePanel = wx.Panel(parent=self, id=wx.ID_ANY, style=wx.WANTS_CHARS)
+        self.tree = wx.gizmos.TreeListCtrl(parent=self.treePanel, id=wx.ID_ANY,
                                 pos=wx.DefaultPosition, size=wx.DefaultSize,
                                 style=wx.TR_HAS_BUTTONS|wx.TR_HIDE_ROOT)
+        self.buildTree()
+        self.treePanel.Bind(wx.EVT_SIZE, self.e_OnSize)
+
+        # Event bindings
+        self.Bind(wx.EVT_CLOSE, self.e_OnWindowClose)
+
+
+        #
+        # # Event handlers
+        # Publisher().subscribe(self.handleEvent_new_resource, "event")
+
+        # self.tree.Expand(self.node_root)
+
+        self.Show(True)
+
+        self.SetSize((640, 480))
+        # self.Fit()
+
+        # Run updates
+        wx.CallAfter(self.update_tree)
+
+    def buildMenubar(self):
+        self.menubar = wx.MenuBar()
+
+        # File
+        self.menu_file = wx.Menu()
+        item = self.menu_file.Append(-1, "E&xit\tCtrl-Q", "Exit")
+        self.Bind(wx.EVT_MENU, self.e_MenuExit, item)
+
+        self.menubar.Append(self.menu_file, "&File")
+
+        # Set frame menubar
+        self.SetMenuBar(self.menubar)
+
+    def buildTree(self):
         self.tree.AddColumn('')
         self.tree.AddColumn('Type')
         self.tree.AddColumn('Vendor')
@@ -40,32 +70,6 @@ class MainView(object):
         self.tree.SetPyData(self.node_root, None)
         self.nodes_hosts = {}
         self.nodes_resources = {}
-
-        # Add items?
-        for x in range(5):
-            child = self.tree.AppendItem(self.node_root, "Item %d" % x)
-            self.tree.SetPyData(child, x)
-
-            for y in range(5):
-                subchild = self.tree.AppendItem(child, "Subitem %d" % y)
-                self.tree.SetPyData(subchild, y)
-
-        # Update tree
-        self.update_tree()
-
-        # self.tree.Expand(self.node_root)
-
-        self.frame.Show(True)
-
-        self.frame.SetSize((640, 480))
-        # self.frame.Fit()
-
-    def e_OnSize(self, event):
-        w,h = self.frame.GetClientSizeTuple()
-        self.tree.SetDimensions(0, 0, w, h)
-
-    def e_MenuExit(self, event):
-        self.frame.Close(True)
 
     def update_tree(self):
         all_hosts = self._controller.list_hosts()
@@ -97,19 +101,58 @@ class MainView(object):
                     self.tree.SetPyData(child, res_uuid)
                     self.nodes_resources[res_uuid] = child
 
-    def handle_event(self, event, *args):
-        pass
+    # wx Events
+
+    def e_OnSize(self, event):
+        w,h = self.GetClientSizeTuple()
+        self.tree.SetDimensions(0, 0, w, h)
+
+    def e_MenuExit(self, event):
+        self.Close(True)
+
+    def e_OnWindowClose(self, event):
+        self.Destroy()
 
     # Controller Events
 
-    def event_new_host(self, event, *args):
+    def handleEvent(self, event, args):
+        """
+        Handle events from the controller. Assume invocation from outside GUI thread and call event handlers using
+        wx.CallAfter
+
+        :param event:
+        :param args:
+        :return:
+        """
+        if event == events.ManagerEvents.heartbeat:
+            wx.CallAfter(self.handleEvent_heartbeat, event, args)
+
+        elif event == events.ResourceEvents.created:
+            wx.CallAfter(self.handleEvent_new_resource, event, args)
+
+        elif event == events.ResourceEvents.destroyed:
+            wx.CallAfter(self.handleEvent_del_resource, event, args)
+
+        elif event == events.ResourceEvents.driver_load:
+            wx.CallAfter(self.handleEvent_driver_load, event, args)
+
+        elif event == events.ResourceEvents.driver_unload:
+            wx.CallAfter(self.handleEvent_driver_unload, event, args)
+
+    def handleEvent_heartbeat(self, event, args):
+        # dlg = wx.MessageDialog(self, 'Heartbeat', 'Heartbeat', wx.OK|wx.ICON_INFORMATION)
+        # dlg.ShowModal()
+        # dlg.Destroy()
         pass
 
-    def event_del_host(self, event, *args):
+    def handleEvent_new_resource(self, event, args):
         pass
 
-    def event_new_resource(self, event, *args):
+    def handleEvent_del_resource(self, event, args):
         pass
 
-    def event_del_resource(self, event, *args):
+    def handleEvent_driver_load(self, event, args):
+        pass
+
+    def handleEvent_driver_unload(self, event, args):
         pass

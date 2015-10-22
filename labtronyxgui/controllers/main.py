@@ -3,18 +3,23 @@ __author__ = 'kkennedy'
 import socket
 
 import labtronyx
+from . import BaseController
 
-class MainApplicationController(object):
+class MainApplicationController(BaseController):
 
     def __init__(self):
-        self.model = labtronyx.LabManager()
+        BaseController.__init__(self)
 
         self.event_sub = labtronyx.EventSubscriber()
+        self.event_sub.registerCallback('', self.notifyViews)
 
         self.hosts = {}
 
         # Try to connect to a local instance first
         self.add_host('localhost')
+
+    def _stop(self):
+        self.event_sub.stop()
 
     def resolveHost(self, host):
         """
@@ -82,6 +87,12 @@ class MainApplicationController(object):
             return all_props.keys()
 
     def get_resource_properties(self, res_uuid):
+        """
+        Get the property dictionary for a given resource
+
+        :param res_uuid:
+        :return:
+        """
         for ip_address, remote_man in self.hosts.items():
             res = remote_man._getResource(res_uuid)
 
