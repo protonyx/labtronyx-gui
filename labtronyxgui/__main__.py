@@ -18,8 +18,6 @@ def main(*args):
             app = views.wx_main.MainApp()
             view = views.wx_main.MainView(controller)
 
-            controller.registerView(view)
-
             app.SetTopWindow(view)
             app.MainLoop()
 
