@@ -4,6 +4,7 @@ import socket
 
 import labtronyx
 from . import BaseController
+from .manager import ManagerController
 
 class MainApplicationController(BaseController):
 
@@ -11,15 +12,29 @@ class MainApplicationController(BaseController):
         BaseController.__init__(self)
 
         self.event_sub = labtronyx.EventSubscriber()
-        self.event_sub.registerCallback('', self.notifyViews)
+        self.event_sub.registerCallback('', self._handleEvent)
 
-        self.hosts = {}
+        self._hosts = {}
+        self._prop_cache = {}
 
         # Try to connect to a local instance first
+        # local_hostname = self.networkHostname('127.0.0.1') # TODO: Remove?
+        # self.add_host(local_hostname)
         self.add_host('localhost')
 
     def _stop(self):
         self.event_sub.stop()
+
+    def _handleEvent(self, event):
+        # Notify manager controllers
+        for ip_address, man_con in self._hosts.items():
+            try:
+                man_con._handleEvent(event)
+            except Exception:
+                pass
+
+        # Notify views
+        self.notifyViews(event)
 
     def resolveHost(self, host):
         """
@@ -42,34 +57,38 @@ class MainApplicationController(BaseController):
     def add_host(self, hostname, port=None):
         ip_address = self.resolveHost(hostname)
 
-        if ip_address not in self.hosts:
-            try:
-                remote = labtronyx.RemoteManager(host=ip_address, port=port)
-                self.event_sub.connect(ip_address)
+        if ip_address not in self._hosts:
+            remote = ManagerController(ip_address, port)
+            self.event_sub.connect(ip_address)
 
-                # Force an RPC request
-                remote.getVersion()
-
-                self.hosts[ip_address] = remote
-
-                return True
-
-            except labtronyx.RpcServerNotFound:
-                return False
-
-        return False
+            self._hosts[ip_address] = remote
 
     def remove_host(self, hostname):
         ip_address = self.resolveHost(hostname)
 
-        if ip_address in self.hosts:
-            host = self.hosts.pop(ip_address)
+        if ip_address in self._hosts:
+            host = self._hosts.pop(ip_address)
             del host
 
             self.event_sub.disconnect(ip_address)
 
+    def get_host(self, hostname):
+        """
+        Get a manager controller for the given hostname or IP address
+
+        :param hostname:    hostname or IP address
+        :return:
+        """
+        ip_address = self.resolveHost(hostname)
+
+        return self._hosts.get(ip_address)
+
+    @property
+    def hosts(self):
+        return self._hosts
+
     def list_hosts(self):
-        return self.hosts.keys()
+        return self._hosts.keys()
 
     def list_resources(self, host):
         """
@@ -79,12 +98,29 @@ class MainApplicationController(BaseController):
         :return:
         """
         ip_address = self.resolveHost(host)
-        host = self.hosts.get(ip_address)
+        host = self._hosts.get(ip_address)
 
         if host is not None:
             all_props = host.getProperties()
+            self._prop_cache.update(all_props)
 
             return all_props.keys()
+
+    def get_resource(self, res_uuid):
+        """
+        Get a resource controller for the resource with the given UUID
+
+        :param res_uuid:
+        :return:
+        """
+        for ip_address, man_con in self._hosts.items():
+            try:
+                res = man_con.get_resource(res_uuid)
+                if res is not None:
+                    return res
+
+            except Exception:
+                pass
 
     def get_resource_properties(self, res_uuid):
         """
@@ -93,10 +129,18 @@ class MainApplicationController(BaseController):
         :param res_uuid:
         :return:
         """
-        for ip_address, remote_man in self.hosts.items():
+        for ip_address, remote_man in self._hosts.items():
             res = remote_man._getResource(res_uuid)
 
             if res is not None:
-                return res.getProperties()
+                prop = res.getProperties()
+                self._prop_cache[res_uuid] = prop
 
-        return {}
+                return prop
+
+    def get_resource_properties_cache(self, res_uuid):
+        if self._prop_cache.has_key(res_uuid):
+            return self._prop_cache.get(res_uuid)
+
+        else:
+            return self.get_resource_properties(res_uuid)

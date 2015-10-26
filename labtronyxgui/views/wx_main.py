@@ -2,16 +2,18 @@ import wx
 import wx.gizmos
 
 from labtronyx.common import events
+from labtronyxgui.bases.wx_view import ViewBase
 
 class MainApp(wx.App):
     pass
 
-class MainView(wx.Frame):
+class MainView(ViewBase):
 
     def __init__(self, controller):
         wx.Frame.__init__(self, parent=None, id=-1, title="Labtronyx", size=(640, 480),
                           style=wx.DEFAULT_FRAME_STYLE)
         self._controller = controller
+        self._controller.registerView(self)
 
         # self.sizer = wx.BoxSizer(wx.VERTICAL)
         # self.frame.SetSizer(self.sizer)
@@ -26,14 +28,11 @@ class MainView(wx.Frame):
                                 style=wx.TR_HAS_BUTTONS|wx.TR_HIDE_ROOT)
         self.buildTree()
         self.treePanel.Bind(wx.EVT_SIZE, self.e_OnSize)
+        self.tree.GetMainWindow().Bind(wx.EVT_RIGHT_UP, self.e_OnRightClick)
+        # self.tree.Bind(wx.EVT_KEY_UP, self.e_OnKeyEvent)
 
         # Event bindings
         self.Bind(wx.EVT_CLOSE, self.e_OnWindowClose)
-
-
-        #
-        # # Event handlers
-        # Publisher().subscribe(self.handleEvent_new_resource, "event")
 
         # self.tree.Expand(self.node_root)
 
@@ -72,10 +71,8 @@ class MainView(wx.Frame):
         self.nodes_resources = {}
 
     def update_tree(self):
-        all_hosts = self._controller.list_hosts()
-
         # Hosts
-        for ip_address in all_hosts:
+        for ip_address, host_controller in self._controller.hosts.items():
             # Add new hosts
             if ip_address not in self.nodes_hosts:
                 hostname = self._controller.networkHostname(ip_address)
@@ -89,10 +86,10 @@ class MainView(wx.Frame):
             host_node = self.nodes_hosts.get(ip_address)
 
             # Resources
-            for res_uuid in self._controller.list_resources(ip_address):
+            for res_uuid, res_controller in host_controller.resources.items():
                 # Add new resources
                 if res_uuid not in self.nodes_resources:
-                    res_prop = self._controller.get_resource_properties(res_uuid)
+                    res_prop = res_controller.properties
 
                     # Resource Name
                     node_name = res_prop.get('resourceID')
@@ -102,6 +99,38 @@ class MainView(wx.Frame):
                     self.nodes_resources[res_uuid] = child
 
     # wx Events
+
+    def e_OnRightClick(self, event):
+        pos = event.GetPosition()
+        item, flags, col = self.tree.HitTest(pos)
+
+        if item:
+            node_data = self.tree.GetPyData(item)
+
+            if node_data in self._controller.hosts:
+                # Host
+                pass
+
+            elif self._controller.get_resource(node_data) is not None:
+                # Resource
+                menu = wx.Menu()
+                ctx_control = menu.Append(-1, "&Control", "Control")
+                self.Bind(wx.EVT_MENU, lambda event: self.e_ResourceContextControl(event, node_data), ctx_control)
+                menu.AppendSeparator()
+                ctx_properties = menu.Append(-1, "&Properties", "Properties")
+                self.Bind(wx.EVT_MENU, lambda event: self.e_ResourceContextProperties(event, node_data), ctx_properties)
+
+                self.PopupMenu(menu, event.GetPosition())
+
+    def e_ResourceContextControl(self, event, uuid):
+        pass
+
+    def e_ResourceContextProperties(self, event, uuid):
+        pass
+
+    def e_OnKeyEvent(self, event):
+        keycode = event.GetKeyCode()
+        pass
 
     def e_OnSize(self, event):
         w,h = self.GetClientSizeTuple()
@@ -115,7 +144,7 @@ class MainView(wx.Frame):
 
     # Controller Events
 
-    def handleEvent(self, event, args):
+    def handleEvent(self, event):
         """
         Handle events from the controller. Assume invocation from outside GUI thread and call event handlers using
         wx.CallAfter
@@ -124,35 +153,35 @@ class MainView(wx.Frame):
         :param args:
         :return:
         """
-        if event == events.ManagerEvents.heartbeat:
-            wx.CallAfter(self.handleEvent_heartbeat, event, args)
+        if event == events.EventCodes.manager.heartbeat:
+            wx.CallAfter(self.handleEvent_heartbeat, event)
 
-        elif event == events.ResourceEvents.created:
-            wx.CallAfter(self.handleEvent_new_resource, event, args)
+        elif event == events.EventCodes.resource.created:
+            wx.CallAfter(self.handleEvent_new_resource, event)
 
-        elif event == events.ResourceEvents.destroyed:
-            wx.CallAfter(self.handleEvent_del_resource, event, args)
+        elif event == events.EventCodes.resource.destroyed:
+            wx.CallAfter(self.handleEvent_del_resource, event)
 
-        elif event == events.ResourceEvents.driver_load:
-            wx.CallAfter(self.handleEvent_driver_load, event, args)
+        elif event == events.EventCodes.driver.loaded:
+            wx.CallAfter(self.handleEvent_driver_load, event)
 
-        elif event == events.ResourceEvents.driver_unload:
-            wx.CallAfter(self.handleEvent_driver_unload, event, args)
+        elif event == events.EventCodes.driver.unloaded:
+            wx.CallAfter(self.handleEvent_driver_unload, event)
 
-    def handleEvent_heartbeat(self, event, args):
+    def handleEvent_heartbeat(self, event):
         # dlg = wx.MessageDialog(self, 'Heartbeat', 'Heartbeat', wx.OK|wx.ICON_INFORMATION)
         # dlg.ShowModal()
         # dlg.Destroy()
         pass
 
-    def handleEvent_new_resource(self, event, args):
+    def handleEvent_new_resource(self, event):
         pass
 
-    def handleEvent_del_resource(self, event, args):
+    def handleEvent_del_resource(self, event):
         pass
 
-    def handleEvent_driver_load(self, event, args):
+    def handleEvent_driver_load(self, event):
         pass
 
-    def handleEvent_driver_unload(self, event, args):
+    def handleEvent_driver_unload(self, event):
         pass
