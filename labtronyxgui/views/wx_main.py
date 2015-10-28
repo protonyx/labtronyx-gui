@@ -2,18 +2,16 @@ import wx
 import wx.gizmos
 
 from labtronyx.common import events
-from labtronyxgui.bases.wx_view import ViewBase
+from labtronyxgui.bases.wx_view import FrameViewBase
 
 class MainApp(wx.App):
     pass
 
-class MainView(ViewBase):
+class MainView(FrameViewBase):
 
     def __init__(self, controller):
-        wx.Frame.__init__(self, parent=None, id=-1, title="Labtronyx", size=(640, 480),
-                          style=wx.DEFAULT_FRAME_STYLE)
-        self._controller = controller
-        self._controller.registerView(self)
+        super(MainView, self).__init__(None, controller,
+            id=-1, title="Labtronyx", size=(640, 480), style=wx.DEFAULT_FRAME_STYLE)
 
         # self.sizer = wx.BoxSizer(wx.VERTICAL)
         # self.frame.SetSizer(self.sizer)
@@ -107,11 +105,11 @@ class MainView(ViewBase):
         if item:
             node_data = self.tree.GetPyData(item)
 
-            if node_data in self._controller.hosts:
+            if node_data in self.controller.hosts:
                 # Host
                 pass
 
-            elif self._controller.get_resource(node_data) is not None:
+            elif self.controller.get_resource(node_data) is not None:
                 # Resource
                 menu = wx.Menu()
                 ctx_control = menu.Append(-1, "&Control", "Control")
@@ -123,10 +121,24 @@ class MainView(ViewBase):
                 self.PopupMenu(menu, event.GetPosition())
 
     def e_ResourceContextControl(self, event, uuid):
-        pass
+        from .wx_resources import ResourceControlView
+
+        # Get the resource controller
+        res_controller = self.controller.get_resource(uuid)
+
+        # Instantiate and show the window
+        win = ResourceControlView(self, res_controller)
+        win.Show()
 
     def e_ResourceContextProperties(self, event, uuid):
-        pass
+        from .wx_resources import ResourcePropertiesView
+
+        # Get the resource controller
+        res_controller = self.controller.get_resource(uuid)
+
+        # Instantiate and show the window
+        win = ResourcePropertiesView(self, res_controller)
+        win.Show()
 
     def e_OnKeyEvent(self, event):
         keycode = event.GetKeyCode()
