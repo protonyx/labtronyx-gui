@@ -53,8 +53,14 @@ class ManagerController(BaseController):
     def drivers(self):
         return self._driverInfo
 
+    def list_drivers(self):
+        return self.drivers.keys()
+
     def list_driver_vendors(self):
         return list(set([v.get('deviceVendor', 'Unknown') for k,v in self.drivers.items()]))
+
+    def list_drivers_from_vendor(self, vendor):
+        return [k for k,v in self.drivers.items() if v.get('deviceVendor') == vendor]
 
     def list_driver_models_from_vendor(self, vendor):
         import itertools
