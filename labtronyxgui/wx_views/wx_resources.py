@@ -17,9 +17,20 @@ class ResourceControlView(FrameViewBase):
 
 class ResourcePropertiesView(FrameViewBase):
     def __init__(self, parent, controller):
-        super(ResourcePropertiesView, self).__init__(parent, controller, id=-1, style=wx.DEFAULT_FRAME_STYLE)
+        super(ResourcePropertiesView, self).__init__(parent, controller, id=-1, style=wx.DEFAULT_FRAME_STYLE,
+                                                     title="Resource Properties")
+        mainSizer = wx.BoxSizer(wx.VERTICAL)
 
         self.pnl_info = ResourceInfoPanel(self, controller)
+
+        info_box = wx.StaticBox(self, -1, "Resource Info")
+        info_box_sizer = wx.StaticBoxSizer(info_box, wx.VERTICAL)
+
+        info_box_sizer.Add(self.pnl_info, 0, wx.ALL|wx.EXPAND, 10)
+
+        mainSizer.Add(info_box_sizer, 1, wx.EXPAND|wx.ALL, 10)
+        self.SetSizer(mainSizer)
+        self.SetBackgroundColour(wx.NullColour)
 
 
 class ResourceInfoPanel(PanelViewBase):
@@ -34,6 +45,7 @@ class ResourceInfoPanel(PanelViewBase):
         self._createField("Resource ID", "resourceID")
         self._createField("Resource Type", "resourceType")
         self._createField("Interface Name", "interface")
+        self._createField("Device Type", "deviceType")
         self._createField("Driver", "driver")
 
         # self.pnl_driver = wx.Panel(self, -1)
@@ -47,7 +59,7 @@ class ResourceInfoPanel(PanelViewBase):
 
         self.updateFields()
 
-    def handleEvent(self, event):
+    def _handleEvent(self, event):
         if event.event in [events.EventCodes.resource.driver_loaded, events.EventCodes.resource.driver_unloaded,
                            events.EventCodes.resource.changed]:
             self.updateFields()

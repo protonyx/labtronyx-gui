@@ -82,6 +82,13 @@ class MainView(FrameViewBase):
         self.nodes_hosts = {}
         self.nodes_resources = {}
 
+        # Build image list
+        isz = (16, 16)
+        self.il = wx.ImageList(*isz)
+        self.art_host = self.il.Add(wx.ArtProvider_GetBitmap(wx.ART_REMOVABLE, wx.ART_OTHER, isz))
+
+        self.tree.SetImageList(self.il)
+
     def update_tree(self):
         # Hosts
         for ip_address, host_controller in self._controller.hosts.items():
@@ -91,9 +98,10 @@ class MainView(FrameViewBase):
 
                 child = self.tree.AppendItem(self.node_root, hostname)
                 self.tree.SetPyData(child, ip_address)
-                self.nodes_hosts[ip_address] = child
-
+                self.tree.SetItemImage(child, self.art_host)
                 self.tree.Expand(child)
+
+                self.nodes_hosts[ip_address] = child
 
             host_node = self.nodes_hosts.get(ip_address)
 
@@ -109,6 +117,19 @@ class MainView(FrameViewBase):
                     child = self.tree.AppendItem(host_node, node_name)
                     self.tree.SetPyData(child, res_uuid)
                     self.nodes_resources[res_uuid] = child
+
+        self.update_tree_columns()
+
+    def update_tree_columns(self):
+        for res_uuid, res_node in self.nodes_resources.items():
+            res_con = self.controller.get_resource(res_uuid)
+
+            if res_con is not None:
+                res_props = res_con.properties
+                self.tree.SetItemText(res_node, res_props.get('deviceType', ''), 1)
+                self.tree.SetItemText(res_node, res_props.get('deviceVendor', ''), 2)
+                self.tree.SetItemText(res_node, res_props.get('deviceModel', ''), 3)
+                self.tree.SetItemText(res_node, res_props.get('deviceSerial', ''), 4)
 
     # wx Events
 
@@ -170,44 +191,19 @@ class MainView(FrameViewBase):
 
     # Controller Events
 
-    def handleEvent(self, event):
-        """
-        Handle events from the controller. Assume invocation from outside GUI thread and call event handlers using
-        wx.CallAfter
+    def _handleEvent(self, event):
+        if event.event == events.EventCodes.manager.heartbeat:
+            self.handleEvent_heartbeat(event)
 
-        :param event:
-        :param args:
-        :return:
-        """
-        if event == events.EventCodes.manager.heartbeat:
-            wx.CallAfter(self.handleEvent_heartbeat, event)
+        elif event.event in [events.EventCodes.resource.created, events.EventCodes.resource.destroyed]:
+            self.update_tree()
 
-        elif event == events.EventCodes.resource.created:
-            wx.CallAfter(self.handleEvent_new_resource, event)
-
-        elif event == events.EventCodes.resource.destroyed:
-            wx.CallAfter(self.handleEvent_del_resource, event)
-
-        elif event == events.EventCodes.driver.loaded:
-            wx.CallAfter(self.handleEvent_driver_load, event)
-
-        elif event == events.EventCodes.driver.unloaded:
-            wx.CallAfter(self.handleEvent_driver_unload, event)
+        elif event.event in [events.EventCodes.resource.changed, events.EventCodes.resource.driver_loaded,
+                             events.EventCodes.resource.driver_unloaded]:
+            self.update_tree_columns()
 
     def handleEvent_heartbeat(self, event):
         # dlg = wx.MessageDialog(self, 'Heartbeat', 'Heartbeat', wx.OK|wx.ICON_INFORMATION)
         # dlg.ShowModal()
         # dlg.Destroy()
-        pass
-
-    def handleEvent_new_resource(self, event):
-        pass
-
-    def handleEvent_del_resource(self, event):
-        pass
-
-    def handleEvent_driver_load(self, event):
-        pass
-
-    def handleEvent_driver_unload(self, event):
         pass
