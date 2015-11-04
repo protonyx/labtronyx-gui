@@ -13,13 +13,9 @@ def main(*args):
 
         if args[0] == 'wx':
             import wx
-            import views.wx_main
+            from wx_views import wx_main
 
-            app = views.wx_main.MainApp()
-            view = views.wx_main.MainView(controller)
-
-            app.SetTopWindow(view)
-            app.MainLoop()
+            wx_main.main(controller)
 
         else:
             from application.a_Main import a_Main

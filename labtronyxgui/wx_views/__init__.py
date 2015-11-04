@@ -1,16 +1,6 @@
-__author__ = 'kkennedy'
-
 import wx
 
-class ViewBase(object):
-
-    def __init__(self, controller):
-        self._controller = controller
-        self._controller.registerView(self)
-
-    @property
-    def controller(self):
-        return self._controller
+from labtronyxgui.bases.view import ViewBase
 
 
 class FrameViewBase(wx.Frame, ViewBase):
@@ -22,4 +12,10 @@ class FrameViewBase(wx.Frame, ViewBase):
 class PanelViewBase(wx.Panel, ViewBase):
     def __init__(self, parent, controller, **kwargs):
         wx.Panel.__init__(self, parent=parent, **kwargs)
+        ViewBase.__init__(self, controller)
+
+
+class DialogViewBase(wx.Dialog, ViewBase):
+    def __init__(self, parent, controller, **kwargs):
+        wx.Dialog.__init__(self, parent=parent, **kwargs)
         ViewBase.__init__(self, controller)

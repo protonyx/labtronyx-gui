@@ -2,12 +2,26 @@ import wx
 import wx.gizmos
 
 from labtronyx.common import events
-from labtronyxgui.bases.wx_view import FrameViewBase
+from . import FrameViewBase
 
-class MainApp(wx.App):
-    pass
+def main(controller):
+    app = LabtronyxApp()
+    view = MainView(controller)
+
+    app.SetTopWindow(view)
+    app.MainLoop()
+
+
+class LabtronyxApp(wx.App):
+
+    def OnInit(self):
+        return True
+
 
 class MainView(FrameViewBase):
+    """
+    Labtronyx Top-Level Window
+    """
 
     def __init__(self, controller):
         super(MainView, self).__init__(None, controller,

@@ -20,6 +20,8 @@ class ManagerController(BaseController):
             # Use a shorter timeout to keep the GUI responsive
             self._remoteManager = labtronyx.RemoteManager(host=ip_address, port=port, timeout=1.0)
 
+            self._hostname = self._remoteManager.getHostname()
+
             # Build cache of resources
             self._refresh()
 
@@ -27,7 +29,15 @@ class ManagerController(BaseController):
             self.status = "offline"
 
     def _handleEvent(self, event):
-        pass
+        # Check if this event is for us
+        if event.hostname == self._hostname:
+            for res_uuid, res_con in self._resources.items():
+                try:
+                    res_con._handleEvent(event)
+                except Exception:
+                    pass
+
+            self.notifyViews(event)
 
     def _refresh(self):
         self._remoteManager.refresh()
@@ -57,18 +67,49 @@ class ManagerController(BaseController):
         return self.drivers.keys()
 
     def list_driver_vendors(self):
-        return list(set([v.get('deviceVendor', 'Unknown') for k,v in self.drivers.items()]))
+        vendors = set()
 
-    def list_drivers_from_vendor(self, vendor):
-        return [k for k,v in self.drivers.items() if v.get('deviceVendor') == vendor]
+        for driver_name, driver_info in self.drivers.items():
+            for comp_vendor, comp_models in driver_info.get('compatibleInstruments', {}).items():
+                vendors.add(comp_vendor)
+
+        return list(vendors)
 
     def list_driver_models_from_vendor(self, vendor):
-        import itertools
-        models = list([v.get('deviceModel') for k,v in self.drivers.items() if v.get('deviceVendor') == vendor])
-        return list(set(itertools.chain(*models)))
+        models = set()
 
-    def list_drivers_vendor_model(self, vendor, model):
-        return [k for k,v in self.drivers.items() if v.get('deviceVendor') == vendor and model in v.get('deviceModel')]
+        for driver_name, driver_info in self.drivers.items():
+            for comp_vendor, comp_models in driver_info.get('compatibleInstruments', {}).items():
+                if vendor == comp_vendor:
+                    models.update(comp_models)
+
+        return list(models)
+
+    def get_drivers(self):
+        return self.drivers
+
+    def get_drivers_from_vendor(self, vendor):
+        drivers = {}
+
+        for driver_name, driver_info in self.drivers.items():
+            for comp_vendor, comp_models in driver_info.get('compatibleInstruments', {}).items():
+                if vendor == comp_vendor:
+                    drivers[driver_name] = driver_info
+
+        return drivers
+
+    def get_drivers_from_vendor_model(self, vendor, model):
+        drivers = {}
+
+        for driver_name, driver_info in self.drivers.items():
+            for comp_vendor, comp_models in driver_info.get('compatibleInstruments', {}).items():
+                if vendor == comp_vendor and model in comp_models:
+                    drivers[driver_name] = driver_info
+
+        return drivers
+
+    def filter_compatible_drivers(self, drivers, interfaceName):
+        return {k:v for k,v in self.drivers.items() if interfaceName in v.get('compatibleInterfaces', [])}
 
     def list_resources(self):
         return self._resources.keys()
