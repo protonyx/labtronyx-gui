@@ -15,10 +15,14 @@ class ManagerController(BaseController):
 
         self._model = model
 
-        self._resources = {}
         self._hostname = self._model.getHostname()
 
+        # Update Resources
+        self._resources = {}
         self._refresh()
+
+        # Get driver list
+        self._driverInfo = self._model.getDriverInfo()
 
     @property
     def model(self):
@@ -37,16 +41,12 @@ class ManagerController(BaseController):
 
     def _refresh(self):
         self.model.refresh()
-        res_list = self.model.findResources()
 
-        # Refresh resources
-        for res in res_list:
-            if res.uuid not in self._resources:
-                remote = ResourceController(self, res)
-                self._resources[res.uuid] = remote
-
-        # Refresh driver list
-        self._driverInfo = self.model.getDriverInfo()
+        # Create controllers for each of the model resources
+        for res_uuid, resObj in self.model.resources.items():
+            if res_uuid not in self._resources:
+                remote = ResourceController(self, resObj)
+                self._resources[res_uuid] = remote
 
     def get_resource(self, res_uuid):
         return self._resources.get(res_uuid)

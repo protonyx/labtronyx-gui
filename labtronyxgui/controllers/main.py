@@ -15,8 +15,8 @@ class MainApplicationController(BaseController):
         self.event_sub.registerCallback('', self._handleEvent)
 
         self._hosts = {}
-        self._prop_cache = {}
 
+        # Get proper hostname for localhost
         local_hostname = self.networkHostname('127.0.0.1')
 
         if not self.add_host(local_hostname):
@@ -78,7 +78,6 @@ class MainApplicationController(BaseController):
         if ip_address not in self._hosts:
             try:
                 remote = labtronyx.RemoteManager(host=ip_address, port=port, timeout=1.0)
-                remote.refresh()
 
                 new_controller = ManagerController(remote)
                 self.event_sub.connect(ip_address)
@@ -120,22 +119,6 @@ class MainApplicationController(BaseController):
     def list_hosts(self):
         return self._hosts.keys()
 
-    def list_resources(self, host):
-        """
-        Get a list of Resource UUIDs for a given host
-
-        :param host:
-        :return:
-        """
-        ip_address = self.resolveHost(host)
-        host = self._hosts.get(ip_address)
-
-        if host is not None:
-            all_props = host.getProperties()
-            self._prop_cache.update(all_props)
-
-            return all_props.keys()
-
     def get_resource(self, res_uuid):
         """
         Get a resource controller for the resource with the given UUID
@@ -151,26 +134,3 @@ class MainApplicationController(BaseController):
 
             except Exception:
                 pass
-
-    def get_resource_properties(self, res_uuid):
-        """
-        Get the property dictionary for a given resource
-
-        :param res_uuid:
-        :return:
-        """
-        for ip_address, remote_man in self._hosts.items():
-            res = remote_man._getResource(res_uuid)
-
-            if res is not None:
-                prop = res.getProperties()
-                self._prop_cache[res_uuid] = prop
-
-                return prop
-
-    def get_resource_properties_cache(self, res_uuid):
-        if self._prop_cache.has_key(res_uuid):
-            return self._prop_cache.get(res_uuid)
-
-        else:
-            return self.get_resource_properties(res_uuid)

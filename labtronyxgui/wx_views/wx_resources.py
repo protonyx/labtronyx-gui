@@ -35,19 +35,20 @@ class ResourceInfoPanel(PanelViewBase):
 
         # Controls
         self._createField("Resource ID", "resourceID")
+        self._createField("Interface", "interface")
         self._createField("Resource Type", "resourceType")
-        self._createField("Interface Name", "interface")
         self._createField("Device Type", "deviceType")
         self._createField("Driver", "driver")
 
-        # self.pnl_driver = wx.Panel(self, -1)
         self.btn_driver = wx.Button(self, -1, "Driver")
         self.mainSizer.Add((10, 10))
         self.mainSizer.Add(self.btn_driver, 0, wx.ALIGN_LEFT)
         self.Bind(wx.EVT_BUTTON, self.e_DriverOnClick, self.btn_driver)
 
-        self.SetSizerAndFit(self.mainSizer)
-        self.mainSizer.Fit(self)
+        self.mainSizer.AddGrowableCol(1)
+
+        self.SetSizer(self.mainSizer)
+        self.SetAutoLayout(True)
 
         self.updateFields()
 
@@ -60,8 +61,8 @@ class ResourceInfoPanel(PanelViewBase):
         lblNew = wx.StaticText(self, -1, label + ":")
         self._fields[prop_key] = wx.StaticText(self, -1, "")
 
-        self.mainSizer.Add(lblNew, 0, wx.ALIGN_RIGHT)
-        self.mainSizer.Add(self._fields[prop_key], 0, wx.EXPAND)
+        self.mainSizer.Add(lblNew,                 0, wx.ALIGN_RIGHT|wx.RIGHT, 5)
+        self.mainSizer.Add(self._fields[prop_key], 1, wx.ALIGN_LEFT|wx.EXPAND)
 
     def updateFields(self):
         self.props = self.controller.properties
@@ -76,8 +77,8 @@ class ResourceInfoPanel(PanelViewBase):
             self.btn_driver.SetLabelText("Unload Driver")
 
         # Refresh panel since item lengths may have changed
-        self.Layout()
         self.mainSizer.Fit(self)
+        self.Fit()
 
     def e_DriverOnClick(self, event):
         if self.props.get('driver', '') == '':

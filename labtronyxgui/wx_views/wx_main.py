@@ -61,7 +61,7 @@ class MainView(FrameViewBase):
         self.buildTree()
 
         # Build Main Panel
-        self.pnl_content = wx.Panel(self.mainPanel)
+        self.pnl_content = wx.Panel(self.mainPanel, style=wx.TAB_TRAVERSAL|wx.CLIP_CHILDREN|wx.FULL_REPAINT_ON_RESIZE)
 
         # Build Log
         self.log = wx.TextCtrl(self.mainPanel, -1, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL)
@@ -181,7 +181,9 @@ class MainView(FrameViewBase):
 
         # Build panel
         self.pnl_content.DestroyChildren()
+        # self.pnl_content.ClearBackground()
         res_panel = ResourceInfoPanel(self.pnl_content, res_controller)
+        # res_panel.SetBackgroundColour(wx.BLUE)
 
         lbl = wx.StaticText(self.pnl_content, -1, "Resource Details")
         lbl.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD))
@@ -189,10 +191,12 @@ class MainView(FrameViewBase):
         panelSizer = wx.BoxSizer(wx.VERTICAL)
         panelSizer.Add(lbl,                             0, wx.EXPAND|wx.ALL, 5)
         panelSizer.Add(wx.StaticLine(self.pnl_content), 0, wx.EXPAND|wx.ALL, 5)
-        panelSizer.Add(res_panel,                       0, wx.EXPAND|wx.ALL, 5)
+        panelSizer.Add(res_panel,                       1, wx.EXPAND|wx.ALL, 5)
         self.pnl_content.SetSizerAndFit(panelSizer)
         self.pnl_content.Layout()
         self.pnl_content.Refresh()
+
+
 
         self.pnl_content.Thaw()
 
