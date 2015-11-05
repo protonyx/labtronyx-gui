@@ -17,10 +17,21 @@ class MainApplicationController(BaseController):
         self._hosts = {}
         self._prop_cache = {}
 
-        # Try to connect to a local instance first
-        # local_hostname = self.networkHostname('127.0.0.1') # TODO: Remove?
-        # self.add_host(local_hostname)
-        self.add_host('localhost')
+        local_hostname = self.networkHostname('127.0.0.1')
+
+        if not self.add_host(local_hostname):
+            try:
+                # No local host found, lets start one
+                local_host = labtronyx.InstrumentManager(server=True)
+                new_controller = ManagerController(local_host)
+
+                ip_address = self.resolveHost(local_hostname)
+                self.event_sub.connect(ip_address)
+
+                self._hosts[ip_address] = new_controller
+
+            except Exception as e:
+                pass
 
     def _stop(self):
         self.event_sub.stop()
@@ -55,13 +66,32 @@ class MainApplicationController(BaseController):
         return socket.gethostbyaddr(ip_address)[0]
 
     def add_host(self, hostname, port=None):
+        """
+        Add remote host
+
+        :param hostname:
+        :param port:
+        :rtype: bool
+        """
         ip_address = self.resolveHost(hostname)
 
         if ip_address not in self._hosts:
-            remote = ManagerController(ip_address, port)
-            self.event_sub.connect(ip_address)
+            try:
+                remote = labtronyx.RemoteManager(host=ip_address, port=port, timeout=1.0)
+                remote.refresh()
 
-            self._hosts[ip_address] = remote
+                new_controller = ManagerController(remote)
+                self.event_sub.connect(ip_address)
+
+                self._hosts[ip_address] = new_controller
+
+                return True
+
+            except labtronyx.RpcServerNotFound:
+                return False
+
+        return False
+
 
     def remove_host(self, hostname):
         ip_address = self.resolveHost(hostname)

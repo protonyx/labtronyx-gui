@@ -10,24 +10,19 @@ class ManagerController(BaseController):
     Wraps RemoteManager
     """
 
-    def __init__(self, ip_address, port=None):
+    def __init__(self, model):
         BaseController.__init__(self)
 
+        self._model = model
+
         self._resources = {}
-        self._hostname = ''
+        self._hostname = self._model.getHostname()
 
-        # Attempt to connect
-        try:
-            # Use a shorter timeout to keep the GUI responsive
-            self._remoteManager = labtronyx.RemoteManager(host=ip_address, port=port, timeout=1.0)
+        self._refresh()
 
-            self._hostname = self._remoteManager.getHostname()
-
-            # Build cache of resources
-            self._refresh()
-
-        except labtronyx.RpcServerNotFound:
-            self.status = "offline"
+    @property
+    def model(self):
+        return self._model
 
     def _handleEvent(self, event):
         # Check if this event is for us
@@ -41,8 +36,8 @@ class ManagerController(BaseController):
             self.notifyViews(event)
 
     def _refresh(self):
-        self._remoteManager.refresh()
-        res_list = self._remoteManager.findResources()
+        self.model.refresh()
+        res_list = self.model.findResources()
 
         # Refresh resources
         for res in res_list:
@@ -51,7 +46,7 @@ class ManagerController(BaseController):
                 self._resources[res.uuid] = remote
 
         # Refresh driver list
-        self._driverInfo = self._remoteManager.getDriverInfo()
+        self._driverInfo = self.model.getDriverInfo()
 
     def get_resource(self, res_uuid):
         return self._resources.get(res_uuid)
@@ -114,7 +109,7 @@ class ManagerController(BaseController):
         return drivers
 
     def filter_compatible_drivers(self, drivers, interfaceName):
-        return {k:v for k,v in self.drivers.items() if interfaceName in v.get('compatibleInterfaces', [])}
+        return {k:v for k,v in drivers.items() if interfaceName in v.get('compatibleInterfaces', [])}
 
     def list_resources(self):
         return self._resources.keys()

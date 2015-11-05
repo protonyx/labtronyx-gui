@@ -8,13 +8,14 @@ class ResourceController(BaseController):
     Wraps RemoteResource
     """
 
-    def __init__(self, manager_controller, remote_resource):
+    def __init__(self, manager_controller, model):
         super(ResourceController, self).__init__()
 
         self._manager_controller = manager_controller
-        self._model = remote_resource
+        self._model = model
 
         self._uuid = self._model.uuid
+        self._resID = self._model.resID
 
     def _handleEvent(self, event):
         resource_events = labtronyx.common.events.EventCodes.resource
@@ -27,6 +28,10 @@ class ResourceController(BaseController):
     @property
     def model(self):
         return self._model
+
+    @property
+    def resID(self):
+        return self._resID
 
     @property
     def manager(self):

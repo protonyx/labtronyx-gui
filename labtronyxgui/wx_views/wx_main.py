@@ -1,9 +1,10 @@
 import wx
 import wx.aui
-import wx.gizmos
+import wx.lib
 
 from labtronyx.common import events
 from . import FrameViewBase, PanelViewBase
+from .wx_resources import ResourceInfoPanel
 
 def main(controller):
     app = LabtronyxApp(controller)
@@ -44,9 +45,10 @@ class MainView(FrameViewBase):
         # Build Left Panel
         self.pnl_left = wx.Panel(self.mainPanel, style=wx.TAB_TRAVERSAL|wx.CLIP_CHILDREN)
         # Resource Tree
-        self.tree = wx.TreeCtrl(self.pnl_left, -1,
-                                style=wx.TR_HAS_BUTTONS|wx.TR_HIDE_ROOT)
+        self.tree = wx.TreeCtrl(self.pnl_left, -1, style=wx.TR_DEFAULT_STYLE|wx.TR_HIDE_ROOT)
         self.host = wx.Choice(self.pnl_left, -1, style=wx.CB_SORT)
+        self.updateHostSelector()
+        self.host.SetSelection(0)
         host_select_sizer = wx.BoxSizer(wx.HORIZONTAL)
         host_select_sizer.Add(self.host, 1, wx.EXPAND)
 
@@ -65,6 +67,7 @@ class MainView(FrameViewBase):
         self.log = wx.TextCtrl(self.mainPanel, -1, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL)
 
         # Event bindings
+        self.Bind(wx.EVT_CHOICE, self.e_OnHostSelect, self.host)
         self.Bind(wx.EVT_CLOSE, self.e_OnWindowClose)
 
         self.SetBackgroundColour(wx.NullColour)
@@ -78,10 +81,6 @@ class MainView(FrameViewBase):
                              Floatable(False).CloseButton(False).MinSize((240, -1)).Resizable(True).Caption("Resources").
                              Name("ResourceTree"))
         self.aui_mgr.Update()
-
-        # Run updates
-        wx.CallAfter(self.updateHostSelector)
-        wx.CallAfter(self.updateTree)
 
     def buildMenubar(self):
         self.menubar = wx.MenuBar()
@@ -108,38 +107,51 @@ class MainView(FrameViewBase):
         self.pnode_root = self.tree.AddRoot("Labtronyx") # Add hidden root item
         self.tree.SetPyData(self.pnode_root, None)
 
-        self.pnode_resources = self.tree.AppendItem(self.pnode_root, 'Resources')
-        self.tree.SetItemImage(self.pnode_resources, self.art_resource)
-
-        self.nodes_resources = {}
-
+        self.updateTree()
         # self.tree.GetMainWindow().Bind(wx.EVT_RIGHT_UP, self.e_OnRightClick)
-        self.tree.Bind(wx.EVT_LEFT_DOWN, self.e_OnTreeLeftClick)
+        self.tree.Bind(wx.EVT_TREE_SEL_CHANGED, self.e_OnTreeSelect)
 
     def updateHostSelector(self):
+        selected = self.host.GetStringSelection()
+
         choices = [hcon.hostname for hcon in self.controller.hosts.values()]
 
         self.host.Clear()
         self.host.AppendItems(choices)
 
+        if selected in choices:
+            self.host.SetStringSelection(selected)
+
+    def get_selected_host_controller(self):
+        hostname = self.host.GetStringSelection()
+        return self.controller.get_host(hostname)
+
     def updateTree(self):
-        # Hosts
-        for ip_address, host_controller in self.controller.hosts.items():
-            # Resources
-            for res_uuid, res_controller in host_controller.resources.items():
-                # Add new resources
-                if res_uuid not in self.nodes_resources:
-                    res_prop = res_controller.properties
+        host_controller = self.get_selected_host_controller()
 
-                    # Resource Name
-                    node_name = res_prop.get('resourceID')
+        if host_controller is None:
+            return
 
-                    child = self.tree.AppendItem(self.pnode_resources, node_name)
-                    self.tree.SetPyData(child, res_uuid)
-                    self.tree.SetItemImage(child, self.art_resource)
-                    self.nodes_resources[res_uuid] = child
+        self.tree.DeleteChildren(self.pnode_root)
+        self.pnode_resources = self.tree.AppendItem(self.pnode_root, 'Resources')
+        self.tree.SetItemImage(self.pnode_resources, self.art_resource)
 
-        # self.update_tree_columns()
+        self.nodes_resources = {}
+
+        for res_uuid, res_controller in host_controller.resources.items():
+            # Add new resources
+            res_prop = res_controller.properties
+
+            # Resource Name
+            node_name = res_prop.get('resourceID')
+
+            child = self.tree.AppendItem(self.pnode_resources, node_name)
+            self.tree.SetPyData(child, res_uuid)
+            self.tree.SetItemImage(child, self.art_resource)
+            self.nodes_resources[res_uuid] = child
+
+        self.tree.SortChildren(self.pnode_resources)
+        self.tree.Expand(self.pnode_resources)
 
     def e_MenuExit(self, event):
         self.Close(True)
@@ -147,12 +159,42 @@ class MainView(FrameViewBase):
     def e_OnWindowClose(self, event):
         self.Destroy()
 
-    def e_OnTreeLeftClick(self, event):
-        pos = event.GetPosition()
-        item, flags = self.tree.HitTest(pos)
+    def e_OnTreeSelect(self, event):
+        item = event.GetItem()
+        item_data = self.tree.GetPyData(item)
 
-        if item == self.tree.GetSelection():
-            pass
+        host_controller = self.get_selected_host_controller()
+
+        if host_controller is not None:
+            if item_data in host_controller.resources:
+                # Resource
+                self.loadResourcePanel(item_data)
+
+    def e_OnHostSelect(self, event):
+        self.updateTree()
+
+    def loadResourcePanel(self, res_uuid):
+        self.pnl_content.Freeze()
+
+        host_controller = self.get_selected_host_controller()
+        res_controller = host_controller.get_resource(res_uuid)
+
+        # Build panel
+        self.pnl_content.DestroyChildren()
+        res_panel = ResourceInfoPanel(self.pnl_content, res_controller)
+
+        lbl = wx.StaticText(self.pnl_content, -1, "Resource Details")
+        lbl.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD))
+
+        panelSizer = wx.BoxSizer(wx.VERTICAL)
+        panelSizer.Add(lbl,                             0, wx.EXPAND|wx.ALL, 5)
+        panelSizer.Add(wx.StaticLine(self.pnl_content), 0, wx.EXPAND|wx.ALL, 5)
+        panelSizer.Add(res_panel,                       0, wx.EXPAND|wx.ALL, 5)
+        self.pnl_content.SetSizerAndFit(panelSizer)
+        self.pnl_content.Layout()
+        self.pnl_content.Refresh()
+
+        self.pnl_content.Thaw()
 
     def _handleEvent(self, event):
         if event.event == events.EventCodes.manager.heartbeat:
@@ -163,82 +205,10 @@ class MainView(FrameViewBase):
 
         elif event.event in [events.EventCodes.resource.changed, events.EventCodes.resource.driver_loaded,
                              events.EventCodes.resource.driver_unloaded]:
-            self.update_tree_columns()
+            pass
 
     def handleEvent_heartbeat(self, event):
         # dlg = wx.MessageDialog(self, 'Heartbeat', 'Heartbeat', wx.OK|wx.ICON_INFORMATION)
         # dlg.ShowModal()
         # dlg.Destroy()
         pass
-
-
-class ResourceTreePanel(PanelViewBase):
-    def __init__(self, parent, controller):
-        super(ResourceTreePanel, self).__init__(parent, controller)
-
-        self.mainSizer = wx.BoxSizer(wx.VERTICAL)
-
-        # Build Tree
-        self.tree = wx.gizmos.TreeListCtrl(self, wx.ID_ANY, pos=wx.DefaultPosition, size=wx.DefaultSize,
-                                           style=wx.TR_HAS_BUTTONS|wx.TR_HIDE_ROOT)
-
-
-
-
-
-    def update_tree_columns(self):
-        for res_uuid, res_node in self.nodes_resources.items():
-            res_con = self.controller.get_resource(res_uuid)
-
-            if res_con is not None:
-                res_props = res_con.properties
-                self.tree.SetItemText(res_node, res_props.get('deviceType', ''), 1)
-                self.tree.SetItemText(res_node, res_props.get('deviceVendor', ''), 2)
-                self.tree.SetItemText(res_node, res_props.get('deviceModel', ''), 3)
-                self.tree.SetItemText(res_node, res_props.get('deviceSerial', ''), 4)
-
-
-
-
-
-    def e_OnTreeRightClick(self, event):
-        pos = event.GetPosition()
-        item, flags, col = self.tree.HitTest(pos)
-
-        if item:
-            node_data = self.tree.GetPyData(item)
-
-            if node_data in self.controller.hosts:
-                # Host
-                pass
-
-            elif self.controller.get_resource(node_data) is not None:
-                # Resource
-                menu = wx.Menu()
-                ctx_control = menu.Append(-1, "&Control", "Control")
-                self.Bind(wx.EVT_MENU, lambda event: self.e_ResourceContextControl(event, node_data), ctx_control)
-                menu.AppendSeparator()
-                ctx_properties = menu.Append(-1, "&Properties", "Properties")
-                self.Bind(wx.EVT_MENU, lambda event: self.e_ResourceContextProperties(event, node_data), ctx_properties)
-
-                self.PopupMenu(menu, event.GetPosition())
-
-    def e_ResourceContextControl(self, event, uuid):
-        from .wx_resources import ResourceControlView
-
-        # Get the resource controller
-        res_controller = self.controller.get_resource(uuid)
-
-        # Instantiate and show the window
-        win = ResourceControlView(self, res_controller)
-        win.Show()
-
-    def e_ResourceContextProperties(self, event, uuid):
-        from .wx_resources import ResourcePropertiesView
-
-        # Get the resource controller
-        res_controller = self.controller.get_resource(uuid)
-
-        # Instantiate and show the window
-        win = ResourcePropertiesView(self, res_controller)
-        win.Show()

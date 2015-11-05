@@ -6,14 +6,6 @@ from . import FrameViewBase, PanelViewBase, DialogViewBase
 
 from labtronyx.common import events
 
-class ResourceControlView(FrameViewBase):
-    def __init__(self, parent, controller):
-        super(ResourceControlView, self).__init__(parent, controller, id=-1, style=wx.DEFAULT_FRAME_STYLE)
-
-        # self.lbl_resource = wx.StaticText(self, -1, "Resource: %s" % self.controller.properties.get("resourceID"))
-
-        self.pnl_driver = DriverSelectorPanel(self, controller)
-
 
 class ResourcePropertiesView(FrameViewBase):
     def __init__(self, parent, controller):
@@ -54,7 +46,7 @@ class ResourceInfoPanel(PanelViewBase):
         self.mainSizer.Add(self.btn_driver, 0, wx.ALIGN_LEFT)
         self.Bind(wx.EVT_BUTTON, self.e_DriverOnClick, self.btn_driver)
 
-        self.SetSizer(self.mainSizer)
+        self.SetSizerAndFit(self.mainSizer)
         self.mainSizer.Fit(self)
 
         self.updateFields()
@@ -83,6 +75,10 @@ class ResourceInfoPanel(PanelViewBase):
         else:
             self.btn_driver.SetLabelText("Unload Driver")
 
+        # Refresh panel since item lengths may have changed
+        self.Layout()
+        self.mainSizer.Fit(self)
+
     def e_DriverOnClick(self, event):
         if self.props.get('driver', '') == '':
             # Open load driver panel as a dialogue
@@ -108,10 +104,11 @@ class ResourceInfoPanel(PanelViewBase):
 
 class DriverLoadDialog(DialogViewBase):
     def __init__(self, parent, controller):
-        super(DriverLoadDialog, self).__init__(parent, controller, id=wx.ID_ANY, title="Load Driver...")
+        super(DriverLoadDialog, self).__init__(parent, controller, id=wx.ID_ANY, title="Resource %s" % controller.resID)
 
-        lbl = wx.StaticText(self, -1, "Select a driver to load")
+        lbl = wx.StaticText(self, -1, "Load Driver")
         lbl.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD))
+
         self.drv_select = DriverSelectorPanel(self, controller)
         btnOk = wx.Button(self, wx.ID_OK, "&Ok")
         btnOk.SetDefault()
@@ -123,9 +120,10 @@ class DriverLoadDialog(DialogViewBase):
         btnSizer.Realize()
 
         mainSizer = wx.BoxSizer(wx.VERTICAL)
-        mainSizer.Add(lbl,                 0, wx.ALL|wx.ALIGN_CENTER, border=5)
+        mainSizer.Add(lbl,                 0, wx.EXPAND|wx.ALL, border=5)
+        mainSizer.Add(wx.StaticLine(self), 0, wx.EXPAND|wx.ALL, border=5)
         mainSizer.Add(self.drv_select,     0, wx.EXPAND|wx.ALL, border=5)
-        mainSizer.Add(wx.StaticLine(self), 0, wx.EXPAND|wx.ALL, border=10)
+        mainSizer.Add(wx.StaticLine(self), 0, wx.EXPAND|wx.ALL, border=5)
         mainSizer.Add(btnSizer,            0, wx.ALL|wx.ALIGN_RIGHT, border=5)
 
         self.SetSizer(mainSizer)
@@ -210,6 +208,8 @@ class DriverSelectorPanel(PanelViewBase):
         else:
             drivers = self.controller.manager.get_drivers_from_vendor_model(vendor, model)
 
+        interfaceName = self.controller.properties.get('interface', '')
+        drivers = self.controller.manager.filter_compatible_drivers(drivers, interfaceName)
         driver_list = sorted(drivers.keys())
 
         self.w_driver.Clear()
