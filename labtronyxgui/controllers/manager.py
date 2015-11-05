@@ -14,6 +14,7 @@ class ManagerController(BaseController):
         BaseController.__init__(self)
 
         self._resources = {}
+        self._hostname = ''
 
         # Attempt to connect
         try:
