@@ -1,14 +1,15 @@
 import wx
 import wx.aui
 import wx.lib
-
 from labtronyx.common import events
 from . import FrameViewBase, PanelViewBase
 from .wx_resources import ResourceInfoPanel
 
+
 def main(controller):
     app = LabtronyxApp(controller)
     app.MainLoop()
+
 
 class LabtronyxApp(wx.App):
     def __init__(self, controller):
@@ -29,11 +30,13 @@ class LabtronyxApp(wx.App):
 class MainView(FrameViewBase):
     """
     Labtronyx Top-Level Window
+
+    :type controller: labtronyxgui.controllers.main.MainApplicationController
     """
 
     def __init__(self, controller):
         super(MainView, self).__init__(None, controller,
-            id=-1, title="Labtronyx", size=(640, 480), style=wx.DEFAULT_FRAME_STYLE)
+                                       id=-1, title="Labtronyx", size=(640, 480), style=wx.DEFAULT_FRAME_STYLE)
 
         self.mainPanel = wx.Panel(self)
         self.aui_mgr = wx.aui.AuiManager()
@@ -43,9 +46,9 @@ class MainView(FrameViewBase):
         self.buildMenubar()
 
         # Build Left Panel
-        self.pnl_left = wx.Panel(self.mainPanel, style=wx.TAB_TRAVERSAL|wx.CLIP_CHILDREN)
+        self.pnl_left = wx.Panel(self.mainPanel, style=wx.TAB_TRAVERSAL | wx.CLIP_CHILDREN)
         # Resource Tree
-        self.tree = wx.TreeCtrl(self.pnl_left, -1, style=wx.TR_DEFAULT_STYLE|wx.TR_HIDE_ROOT)
+        self.tree = wx.TreeCtrl(self.pnl_left, -1, style=wx.TR_DEFAULT_STYLE | wx.TR_HIDE_ROOT)
         self.host = wx.Choice(self.pnl_left, -1, style=wx.CB_SORT)
         self.updateHostSelector()
         self.host.SetSelection(0)
@@ -54,33 +57,35 @@ class MainView(FrameViewBase):
 
         leftPanelSizer = wx.BoxSizer(wx.VERTICAL)
         leftPanelSizer.Add(wx.StaticText(self.pnl_left, -1, "Select Host"), 0, wx.ALL, 5)
-        leftPanelSizer.Add(host_select_sizer, 0, wx.EXPAND|wx.BOTTOM, 5)
+        leftPanelSizer.Add(host_select_sizer, 0, wx.EXPAND | wx.BOTTOM, 5)
         leftPanelSizer.Add(self.tree, 1, wx.EXPAND)
         self.pnl_left.SetSizer(leftPanelSizer)
         # self.pnl_left.Fit()
         self.buildTree()
 
         # Build Main Panel
-        self.pnl_content = wx.Panel(self.mainPanel, style=wx.TAB_TRAVERSAL|wx.CLIP_CHILDREN|wx.FULL_REPAINT_ON_RESIZE)
+        self.pnl_content = wx.Panel(self.mainPanel, size=wx.DefaultSize,
+                                    style=wx.TAB_TRAVERSAL | wx.CLIP_CHILDREN | wx.FULL_REPAINT_ON_RESIZE)
 
         # Build Log
-        self.log = wx.TextCtrl(self.mainPanel, -1, style=wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL)
+        self.log = wx.TextCtrl(self.mainPanel, -1, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
 
         # Event bindings
         self.Bind(wx.EVT_CHOICE, self.e_OnHostSelect, self.host)
         self.Bind(wx.EVT_CLOSE, self.e_OnWindowClose)
 
         self.SetBackgroundColour(wx.NullColour)
-        self.SetSize((640, 480))
-        # self.Fit()
+        self.SetSize((800, 600))
 
         self.aui_mgr.AddPane(self.pnl_content, wx.aui.AuiPaneInfo().CenterPane().Name("Content"))
         self.aui_mgr.AddPane(self.log, wx.aui.AuiPaneInfo().Bottom().BestSize((-1, 200)).Caption("Log Messages").
                              Floatable(False).CloseButton(False).Name("LogPanel"))
         self.aui_mgr.AddPane(self.pnl_left, wx.aui.AuiPaneInfo().Left().BestSize((300, -1)).
-                             Floatable(False).CloseButton(False).MinSize((240, -1)).Resizable(True).Caption("Resources").
-                             Name("ResourceTree"))
+                             Floatable(False).CloseButton(False).MinSize((240, -1)).Resizable(True).
+                             Caption("Resources").Name("ResourceTree"))
         self.aui_mgr.Update()
+
+        self.Fit()
 
     def buildMenubar(self):
         self.menubar = wx.MenuBar()
@@ -104,7 +109,7 @@ class MainView(FrameViewBase):
 
         self.tree.SetImageList(self.il)
 
-        self.pnode_root = self.tree.AddRoot("Labtronyx") # Add hidden root item
+        self.pnode_root = self.tree.AddRoot("Labtronyx")  # Add hidden root item
         self.tree.SetPyData(self.pnode_root, None)
 
         self.updateTree()
@@ -181,22 +186,20 @@ class MainView(FrameViewBase):
 
         # Build panel
         self.pnl_content.DestroyChildren()
-        # self.pnl_content.ClearBackground()
         res_panel = ResourceInfoPanel(self.pnl_content, res_controller)
-        # res_panel.SetBackgroundColour(wx.BLUE)
 
         lbl = wx.StaticText(self.pnl_content, -1, "Resource Details")
         lbl.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD))
 
         panelSizer = wx.BoxSizer(wx.VERTICAL)
-        panelSizer.Add(lbl,                             0, wx.EXPAND|wx.ALL, 5)
-        panelSizer.Add(wx.StaticLine(self.pnl_content), 0, wx.EXPAND|wx.ALL, 5)
-        panelSizer.Add(res_panel,                       1, wx.EXPAND|wx.ALL, 5)
-        self.pnl_content.SetSizerAndFit(panelSizer)
+        panelSizer.Add(lbl, 0, wx.EXPAND | wx.ALL, 5)
+        panelSizer.Add(wx.StaticLine(self.pnl_content), 0, wx.EXPAND | wx.ALL, 5)
+        panelSizer.Add(res_panel, 1, wx.EXPAND | wx.ALL, 5)
+        self.pnl_content.SetSizer(panelSizer)
         self.pnl_content.Layout()
-        self.pnl_content.Refresh()
 
-
+        # Force new panel to use all available space
+        res_panel.SetSize(self.pnl_content.GetSize())
 
         self.pnl_content.Thaw()
 
