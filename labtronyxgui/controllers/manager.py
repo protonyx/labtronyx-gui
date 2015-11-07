@@ -52,6 +52,10 @@ class ManagerController(BaseController):
         return self._resources.get(res_uuid)
 
     @property
+    def properties(self):
+        return self.model.getProperties()
+
+    @property
     def hostname(self):
         return self._hostname
 

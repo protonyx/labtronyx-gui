@@ -138,22 +138,31 @@ class MainView(FrameViewBase):
             return
 
         self.tree.DeleteChildren(self.pnode_root)
+        # Resources
         self.pnode_resources = self.tree.AppendItem(self.pnode_root, 'Resources')
         self.tree.SetItemImage(self.pnode_resources, self.art_resource)
-
         self.nodes_resources = {}
+        # Interfaces
+        self.pnode_interfaces = self.tree.AppendItem(self.pnode_root, 'Interfaces')
+        self.nodes_interfaces = {}
+        # Scripts
+        self.pnode_scripts = self.tree.AppendItem(self.pnode_root, 'Scripts')
+        self.nodes_scripts = {}
 
-        for res_uuid, res_controller in host_controller.resources.items():
-            # Add new resources
-            res_prop = res_controller.properties
+        for uuid, prop in host_controller.properties.items():
+            if prop.get('pluginType') == 'resource':
+                node_name = prop.get('resourceID')
+                child = self.tree.AppendItem(self.pnode_resources, node_name)
+                self.tree.SetPyData(child, uuid)
+                self.tree.SetItemImage(child, self.art_resource)
+                self.nodes_resources[uuid] = child
 
-            # Resource Name
-            node_name = res_prop.get('resourceID')
-
-            child = self.tree.AppendItem(self.pnode_resources, node_name)
-            self.tree.SetPyData(child, res_uuid)
-            self.tree.SetItemImage(child, self.art_resource)
-            self.nodes_resources[res_uuid] = child
+            elif prop.get('pluginType') == 'interface':
+                node_name = prop.get('interfaceName')
+                child = self.tree.AppendItem(self.pnode_interfaces, node_name)
+                self.tree.SetPyData(child, uuid)
+                # self.tree.SetItemImage(child, self.art_resource)
+                self.nodes_interfaces[uuid] = child
 
         self.tree.SortChildren(self.pnode_resources)
         self.tree.Expand(self.pnode_resources)
