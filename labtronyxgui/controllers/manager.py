@@ -4,6 +4,11 @@ import labtronyx
 from . import BaseController
 from .resource import ResourceController
 
+rpc_controllers = {
+    'resource': ResourceController
+    # 'script': ScriptController
+}
+
 
 class ManagerController(BaseController):
     """
@@ -17,9 +22,16 @@ class ManagerController(BaseController):
 
         self._hostname = self._model.getHostname()
 
-        # Update Resources
+        # Dictionary caches
+        self._properties = {}
+        self._attributes = {}
+
+        # Controller objects
         self._resources = {}
-        self._refresh()
+        self._interfaces = {}
+        self._scripts = {}
+
+        self.refresh()
 
         # Get driver list
         self._driverInfo = self._model.getDriverInfo()
@@ -39,8 +51,11 @@ class ManagerController(BaseController):
 
             self.notifyViews(event)
 
-    def _refresh(self):
+    def refresh(self):
         self.model.refresh()
+
+        self._properties = self.model.getProperties()
+        self._attributes = self.model.getAttributes()
 
         # Create controllers for each of the model resources
         for res_uuid, resObj in self.model.resources.items():
@@ -52,20 +67,24 @@ class ManagerController(BaseController):
         return self._resources.get(res_uuid)
 
     @property
+    def resources(self):
+        return self._resources
+
+    @property
     def properties(self):
-        return self.model.getProperties()
+        return self._properties
+
+    @property
+    def attributes(self):
+        return self._attributes
 
     @property
     def hostname(self):
         return self._hostname
 
     @property
-    def resources(self):
-        return self._resources
-
-    @property
     def drivers(self):
-        return self._driverInfo
+        return {fqn: plug_attrs for fqn, plug_attrs in self.attributes.items() if v.get('pluginType') == 'driver'}
 
     def list_drivers(self):
         return self.drivers.keys()
