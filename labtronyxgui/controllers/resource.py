@@ -11,7 +11,7 @@ class ResourceController(BaseController):
     def __init__(self, manager_controller, model):
         super(ResourceController, self).__init__()
 
-        self._manager_controller = manager_controller
+        self._manager = manager_controller
         self._model = model
 
         # Cache properties
@@ -35,7 +35,7 @@ class ResourceController(BaseController):
 
     @property
     def manager(self):
-        return self._manager_controller
+        return self._manager
 
     @property
     def model(self):

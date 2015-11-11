@@ -25,8 +25,7 @@ class ScriptInfoPanel(PanelViewBase):
         self.updateFields()
 
     def _handleEvent(self, event):
-        if event.event in [events.EventCodes.resource.driver_loaded, events.EventCodes.resource.driver_unloaded,
-                           events.EventCodes.resource.changed]:
+        if event.event in [events.EventCodes.script.changed]:
             self.updateFields()
 
     def _createField(self, label, prop_key):

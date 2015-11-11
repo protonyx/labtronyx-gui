@@ -3,10 +3,11 @@ __author__ = 'kkennedy'
 import labtronyx
 from . import BaseController
 from .resource import ResourceController
+from .script import ScriptController
 
 rpc_controllers = {
-    'resource': ResourceController
-    # 'script': ScriptController
+    'resource': ResourceController,
+    'script': ScriptController
 }
 
 
@@ -38,18 +39,23 @@ class ManagerController(BaseController):
         return self._model
 
     def _handleEvent(self, event):
-        resource_events = labtronyx.common.events.EventCodes.resource
+        event_codes = labtronyx.common.events.EventCodes
+        resource_events = event_codes.resource
+        script_events = event_codes.script
 
         # Check if this event is for us
         if event.hostname == self._hostname:
             if event.event in [resource_events.driver_loaded, resource_events.driver_unloaded, resource_events.changed]:
                 self.refresh()
 
-            for res_uuid, res_con in self._resources.items():
-                try:
-                    res_con._handleEvent(event)
-                except Exception:
-                    pass
+                for res_uuid, res_con in self._resources.items():
+                    try:
+                        res_con._handleEvent(event)
+                    except Exception:
+                        pass
+
+            elif event.event in [script_events.changed, script_events.created, script_events.destroyed]:
+                self.refresh()
 
             self.notifyViews(event)
 
@@ -65,12 +71,24 @@ class ManagerController(BaseController):
                 remote = ResourceController(self, resObj)
                 self._resources[res_uuid] = remote
 
+        for scr_uuid, scrObj in self.model.scripts.items():
+            if scr_uuid not in self._scripts:
+                remote = ScriptController(self, scrObj)
+                self._scripts[scr_uuid] = remote
+
     def get_resource(self, res_uuid):
         return self._resources.get(res_uuid)
 
     @property
     def resources(self):
         return self._resources
+
+    def get_script(self, scr_uuid):
+        return self._scripts.get(scr_uuid)
+
+    @property
+    def scripts(self):
+        return self._scripts
 
     @property
     def properties(self):
@@ -143,3 +161,8 @@ class ManagerController(BaseController):
     def get_script_attributes(self):
         return {plug_uuid: plug_attr for plug_uuid, plug_attr in self.attributes.items()
                                      if plug_attr.get('pluginType') == 'script'}
+
+    def create_script_instance(self, fqn, **kwargs):
+        new_uuid = self.model.openScript(fqn, **kwargs)
+
+        return new_uuid

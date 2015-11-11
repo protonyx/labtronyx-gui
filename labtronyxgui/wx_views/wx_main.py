@@ -174,7 +174,7 @@ class MainView(FrameViewBase):
                 self.nodes_interfaces[uuid] = child
 
             elif prop.get('pluginType') == 'script':
-                node_name = prop.get('name')
+                node_name = prop.get('fqn')
                 child = self.tree.AppendItem(self.pnode_scripts, node_name)
                 self.tree.SetPyData(child, uuid)
                 self.tree.SetItemImage(child, self.art_script)
@@ -197,10 +197,10 @@ class MainView(FrameViewBase):
 
         if host_controller is not None:
             if item == self.pnode_resources:
-                pass
+                self.clearContentPanel()
 
             elif item == self.pnode_interfaces:
-                pass
+                self.clearContentPanel()
 
             elif item == self.pnode_scripts:
                 self.loadScriptSummary()
@@ -212,15 +212,18 @@ class MainView(FrameViewBase):
                     self.loadResourcePanel(item_data)
 
                 elif item_props.get('pluginType') == 'interface':
-                    pass
+                    self.clearContentPanel()
 
                 elif item_props.get('pluginType') == 'script':
-                    pass
+                    self.loadScriptPanel(item_data)
+
+                else:
+                    self.clearContentPanel()
 
     def e_OnHostSelect(self, event):
         self.updateTree()
 
-    def _clearContentPanel(self):
+    def clearContentPanel(self):
         self.pnl_content.DestroyChildren()
 
     def _loadContentPanel(self, panel, title):
@@ -247,15 +250,23 @@ class MainView(FrameViewBase):
         res_controller = host_controller.get_resource(res_uuid)
 
         # Build panel
-        self._clearContentPanel()
+        self.clearContentPanel()
         res_panel = ResourceInfoPanel(self.pnl_content, res_controller)
         self._loadContentPanel(res_panel, "Resource Details")
+
+    def loadScriptPanel(self, script_uuid):
+        host_controller = self.get_selected_host_controller()
+        scr_controller = host_controller.get_script(script_uuid)
+
+        self.clearContentPanel()
+        scr_panel = ScriptInfoPanel(self.pnl_content, scr_controller)
+        self._loadContentPanel(scr_panel, "Script Details")
 
     def loadScriptSummary(self):
         host_controller = self.get_selected_host_controller()
 
         # Build panel
-        self._clearContentPanel()
+        self.clearContentPanel()
         new_panel = ScriptBrowserPanel(self.pnl_content, host_controller)
         self._loadContentPanel(new_panel, "Scripts")
 

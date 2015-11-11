@@ -76,18 +76,34 @@ class ScriptSummaryPanel(PanelViewBase):
     def __init__(self, parent, controller, fqn):
         super(ScriptSummaryPanel, self).__init__(parent, controller, id=wx.ID_ANY)
 
-        self.mainSizer = wx.FlexGridSizer(cols=2, hgap=5, vgap=5)
+        self.fqn = fqn
         self.attributes = self.controller.attributes.get(fqn, {})
+        self.params = self.attributes.get('parameters')
 
-        # Controls
+        # Attributes
+        self.attrSizer = wx.FlexGridSizer(cols=2, hgap=5, vgap=5)
         self._createField("Script Name", "name")
         self._createField("Description", "description")
         self._createField("Category", "category")
 
         if self.attributes.get("subcategory") != '':
             self._createField("Subcategory", "subcategory")
+        self.attrSizer.AddGrowableCol(1)
 
-        self.mainSizer.AddGrowableCol(1)
+        # Parameters
+        self.paramSizer = wx.FlexGridSizer(cols=2, hgap=5, vgap=5)
+        for param in self.params:
+            self._createParameter(param)
+        self.paramSizer.AddGrowableCol(1)
+
+        self.btn_create = wx.Button(self, -1, "Create Instance")
+        self.Bind(wx.EVT_BUTTON, self.e_OnClick, self.btn_create)
+
+        self.mainSizer = wx.BoxSizer(wx.VERTICAL)
+        self.mainSizer.Add(self.attrSizer, 0, wx.EXPAND)
+        self.mainSizer.Add(wx.StaticText(self, -1, 'Parameters'), 0, wx.ALIGN_CENTER | wx.TOP, 10)
+        self.mainSizer.Add(self.paramSizer, 1, wx.EXPAND)
+        self.mainSizer.Add(self.btn_create, 0, wx.ALIGN_CENTER | wx.BOTTOM, 10)
 
         self.SetSizer(self.mainSizer)
         self.SetAutoLayout(True)
@@ -96,9 +112,32 @@ class ScriptSummaryPanel(PanelViewBase):
         pass
 
     def _createField(self, label, prop_key):
-        lblNew = wx.StaticText(self, -1, label + ":")
-        txtNew = wx.StaticText(self, -1, self.attributes.get(prop_key))
+        self._gridText_attr(label, self.attributes.get(prop_key))
+
+    def _createParameter(self, param_key):
+        self._gridText_param(param_key, self.params.get(param_key).get('description'))
+
+    def _gridText_attr(self, label, text):
+        if label != '':
+            label += ":"
+
+        lblNew = wx.StaticText(self, -1, label)
+        txtNew = wx.StaticText(self, -1, text)
         txtNew.Wrap(170)
 
-        self.mainSizer.Add(lblNew, 0, wx.ALIGN_RIGHT | wx.RIGHT, 5)
-        self.mainSizer.Add(txtNew, 1, wx.ALIGN_LEFT | wx.EXPAND)
+        self.attrSizer.Add(lblNew, 0, wx.ALIGN_RIGHT | wx.RIGHT, 5)
+        self.attrSizer.Add(txtNew, 1, wx.ALIGN_LEFT | wx.EXPAND)
+
+    def _gridText_param(self, label, text):
+        if label != '':
+            label += ":"
+
+        lblNew = wx.StaticText(self, -1, label)
+        txtNew = wx.StaticText(self, -1, text)
+        txtNew.Wrap(170)
+
+        self.paramSizer.Add(lblNew, 0, wx.ALIGN_RIGHT | wx.RIGHT, 5)
+        self.paramSizer.Add(txtNew, 1, wx.ALIGN_LEFT | wx.EXPAND)
+
+    def e_OnClick(self, event):
+        self.controller.create_script_instance(self.fqn)
