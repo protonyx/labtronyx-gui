@@ -7,24 +7,6 @@ from . import FrameViewBase, PanelViewBase, DialogViewBase
 from labtronyx.common import events
 
 
-class ResourcePropertiesView(FrameViewBase):
-    def __init__(self, parent, controller):
-        super(ResourcePropertiesView, self).__init__(parent, controller, id=-1, style=wx.DEFAULT_FRAME_STYLE,
-                                                     title="Resource Properties")
-        mainSizer = wx.BoxSizer(wx.VERTICAL)
-
-        self.pnl_info = ResourceInfoPanel(self, controller)
-
-        info_box = wx.StaticBox(self, -1, "Resource Info")
-        info_box_sizer = wx.StaticBoxSizer(info_box, wx.VERTICAL)
-
-        info_box_sizer.Add(self.pnl_info, 0, wx.ALL|wx.EXPAND, 10)
-
-        mainSizer.Add(info_box_sizer, 1, wx.EXPAND|wx.ALL, 10)
-        self.SetSizer(mainSizer)
-        self.SetBackgroundColour(wx.NullColour)
-
-
 class ResourceInfoPanel(PanelViewBase):
     def __init__(self, parent, controller):
         super(ResourceInfoPanel, self).__init__(parent, controller, id=wx.ID_ANY)

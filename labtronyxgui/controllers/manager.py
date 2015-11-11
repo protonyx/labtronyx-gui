@@ -33,16 +33,18 @@ class ManagerController(BaseController):
 
         self.refresh()
 
-        # Get driver list
-        self._driverInfo = self._model.getDriverInfo()
-
     @property
     def model(self):
         return self._model
 
     def _handleEvent(self, event):
+        resource_events = labtronyx.common.events.EventCodes.resource
+
         # Check if this event is for us
         if event.hostname == self._hostname:
+            if event.event in [resource_events.driver_loaded, resource_events.driver_unloaded, resource_events.changed]:
+                self.refresh()
+
             for res_uuid, res_con in self._resources.items():
                 try:
                     res_con._handleEvent(event)
@@ -84,7 +86,8 @@ class ManagerController(BaseController):
 
     @property
     def drivers(self):
-        return {fqn: plug_attrs for fqn, plug_attrs in self.attributes.items() if v.get('pluginType') == 'driver'}
+        return {fqn: plug_attrs for fqn, plug_attrs in self.attributes.items()
+                if plug_attrs.get('pluginType') == 'driver'}
 
     def list_drivers(self):
         return self.drivers.keys()
@@ -136,3 +139,7 @@ class ManagerController(BaseController):
 
     def list_resources(self):
         return self._resources.keys()
+
+    def get_script_attributes(self):
+        return {plug_uuid: plug_attr for plug_uuid, plug_attr in self.attributes.items()
+                                     if plug_attr.get('pluginType') == 'script'}

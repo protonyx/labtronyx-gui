@@ -1,8 +1,13 @@
 import wx
 import wx.aui
 import wx.lib
+import wx.lib.mixins.inspection
 from labtronyx.common import events
 from . import FrameViewBase, PanelViewBase
+
+# View Imports
+from .wx_manager import ScriptBrowserPanel
+from .wx_scripts import ScriptInfoPanel
 from .wx_resources import ResourceInfoPanel
 
 
@@ -11,18 +16,19 @@ def main(controller):
     app.MainLoop()
 
 
-class LabtronyxApp(wx.App):
+class LabtronyxApp(wx.App, wx.lib.mixins.inspection.InspectionMixin):
     def __init__(self, controller):
         self._controller = controller
         wx.App.__init__(self)
 
     def OnInit(self):
+        self.Init()
+
         self.SetAppName("Labtronyx")
 
         main_view = MainView(self._controller)
-
-        self.SetTopWindow(main_view)
         main_view.Show()
+        self.SetTopWindow(main_view)
 
         return True
 
@@ -104,8 +110,9 @@ class MainView(FrameViewBase):
         # Build image list
         isz = (16, 16)
         self.il = wx.ImageList(*isz)
-        self.art_host = self.il.Add(wx.ArtProvider_GetBitmap(wx.ART_REMOVABLE, wx.ART_OTHER, isz))
-        self.art_resource = self.il.Add(wx.ArtProvider_GetBitmap(wx.ART_NORMAL_FILE, wx.ART_OTHER, isz))
+        self.art_resource = self.il.Add(wx.Image("images/hard-drive-2x.png", wx.BITMAP_TYPE_PNG).ConvertToBitmap())
+        self.art_interface = self.il.Add(wx.Image("images/fork-2x.png", wx.BITMAP_TYPE_PNG).ConvertToBitmap())
+        self.art_script = self.il.Add(wx.Image("images/file-2x.png", wx.BITMAP_TYPE_PNG).ConvertToBitmap())
 
         self.tree.SetImageList(self.il)
 
@@ -144,9 +151,11 @@ class MainView(FrameViewBase):
         self.nodes_resources = {}
         # Interfaces
         self.pnode_interfaces = self.tree.AppendItem(self.pnode_root, 'Interfaces')
+        self.tree.SetItemImage(self.pnode_interfaces, self.art_interface)
         self.nodes_interfaces = {}
         # Scripts
         self.pnode_scripts = self.tree.AppendItem(self.pnode_root, 'Scripts')
+        self.tree.SetItemImage(self.pnode_scripts, self.art_script)
         self.nodes_scripts = {}
 
         for uuid, prop in host_controller.properties.items():
@@ -161,8 +170,15 @@ class MainView(FrameViewBase):
                 node_name = prop.get('interfaceName')
                 child = self.tree.AppendItem(self.pnode_interfaces, node_name)
                 self.tree.SetPyData(child, uuid)
-                # self.tree.SetItemImage(child, self.art_resource)
+                self.tree.SetItemImage(child, self.art_interface)
                 self.nodes_interfaces[uuid] = child
+
+            elif prop.get('pluginType') == 'script':
+                node_name = prop.get('name')
+                child = self.tree.AppendItem(self.pnode_scripts, node_name)
+                self.tree.SetPyData(child, uuid)
+                self.tree.SetItemImage(child, self.art_script)
+                self.nodes_scripts[uuid] = child
 
         self.tree.SortChildren(self.pnode_resources)
         self.tree.Expand(self.pnode_resources)
@@ -180,37 +196,68 @@ class MainView(FrameViewBase):
         host_controller = self.get_selected_host_controller()
 
         if host_controller is not None:
-            if item_data in host_controller.resources:
-                # Resource
-                self.loadResourcePanel(item_data)
+            if item == self.pnode_resources:
+                pass
+
+            elif item == self.pnode_interfaces:
+                pass
+
+            elif item == self.pnode_scripts:
+                self.loadScriptSummary()
+
+            elif item_data in host_controller.properties:
+                item_props = host_controller.properties.get(item_data)
+
+                if item_props.get('pluginType') == 'resource':
+                    self.loadResourcePanel(item_data)
+
+                elif item_props.get('pluginType') == 'interface':
+                    pass
+
+                elif item_props.get('pluginType') == 'script':
+                    pass
 
     def e_OnHostSelect(self, event):
         self.updateTree()
 
-    def loadResourcePanel(self, res_uuid):
+    def _clearContentPanel(self):
+        self.pnl_content.DestroyChildren()
+
+    def _loadContentPanel(self, panel, title):
         self.pnl_content.Freeze()
 
-        host_controller = self.get_selected_host_controller()
-        res_controller = host_controller.get_resource(res_uuid)
-
-        # Build panel
-        self.pnl_content.DestroyChildren()
-        res_panel = ResourceInfoPanel(self.pnl_content, res_controller)
-
-        lbl = wx.StaticText(self.pnl_content, -1, "Resource Details")
+        # Title
+        lbl = wx.StaticText(self.pnl_content, -1, title)
         lbl.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD))
 
         panelSizer = wx.BoxSizer(wx.VERTICAL)
         panelSizer.Add(lbl, 0, wx.EXPAND | wx.ALL, 5)
         panelSizer.Add(wx.StaticLine(self.pnl_content), 0, wx.EXPAND | wx.ALL, 5)
-        panelSizer.Add(res_panel, 1, wx.EXPAND | wx.ALL, 5)
+        panelSizer.Add(panel, 1, wx.EXPAND | wx.ALL, 5)
         self.pnl_content.SetSizer(panelSizer)
         self.pnl_content.Layout()
 
         # Force new panel to use all available space
-        res_panel.SetSize(self.pnl_content.GetSize())
+        # panel.SetSize(self.pnl_content.GetSize())
 
         self.pnl_content.Thaw()
+
+    def loadResourcePanel(self, res_uuid):
+        host_controller = self.get_selected_host_controller()
+        res_controller = host_controller.get_resource(res_uuid)
+
+        # Build panel
+        self._clearContentPanel()
+        res_panel = ResourceInfoPanel(self.pnl_content, res_controller)
+        self._loadContentPanel(res_panel, "Resource Details")
+
+    def loadScriptSummary(self):
+        host_controller = self.get_selected_host_controller()
+
+        # Build panel
+        self._clearContentPanel()
+        new_panel = ScriptBrowserPanel(self.pnl_content, host_controller)
+        self._loadContentPanel(new_panel, "Scripts")
 
     def _handleEvent(self, event):
         if event.event == events.EventCodes.manager.heartbeat:
