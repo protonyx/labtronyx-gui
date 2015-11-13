@@ -3,8 +3,8 @@ __author__ = 'kkennedy'
 import socket
 
 import labtronyx
-from . import BaseController
-from .manager import ManagerController
+from . import BaseController, ManagerController
+
 
 class MainApplicationController(BaseController):
 
@@ -39,10 +39,7 @@ class MainApplicationController(BaseController):
     def _handleEvent(self, event):
         # Notify manager controllers
         for ip_address, man_con in self._hosts.items():
-            try:
-                man_con._handleEvent(event)
-            except Exception:
-                pass
+            man_con._handleEvent(event)
 
         # Notify views
         self.notifyViews(event)

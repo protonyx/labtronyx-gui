@@ -1,14 +1,26 @@
+__author__ = 'kkennedy'
+
+# System Imports
+import sys
+import logging
+import traceback
+
 import wx
 import wx.aui
 import wx.lib
 import wx.lib.mixins.inspection
-from labtronyx.common import events
-from . import FrameViewBase, PanelViewBase
+from wx.lib.agw import genericmessagedialog
+
+# Labtronyx
+import labtronyx
+
+# Package Relative Imports
+from ..controllers import MainApplicationController
 
 # View Imports
-from .wx_manager import ScriptBrowserPanel
-from .wx_scripts import ScriptInfoPanel
-from .wx_resources import ResourceInfoPanel
+from . import FrameViewBase, PanelViewBase, DialogViewBase
+from . import ScriptBrowserPanel, ScriptInfoPanel
+from . import ResourceInfoPanel
 
 
 def main(controller):
@@ -30,17 +42,27 @@ class LabtronyxApp(wx.App, wx.lib.mixins.inspection.InspectionMixin):
         main_view.Show()
         self.SetTopWindow(main_view)
 
+        # Unhandled exception handling
+        sys.excepthook = self.OnException
+
         return True
+
+    def OnException(self, etype, value, trace):
+        msg = "".join(traceback.format_exception(etype, value, trace))
+        msgbox = genericmessagedialog.GenericMessageDialog(None, msg, "Unhandled Exception",
+                                                  wx.OK|wx.ICON_ERROR)
+        msgbox.ShowModal()
 
 
 class MainView(FrameViewBase):
     """
     Labtronyx Top-Level Window
 
-    :type controller: labtronyxgui.controllers.main.MainApplicationController
+    :type controller: MainApplicationController
     """
 
     def __init__(self, controller):
+        assert(isinstance(controller, MainApplicationController))
         super(MainView, self).__init__(None, controller,
                                        id=-1, title="Labtronyx", size=(640, 480), style=wx.DEFAULT_FRAME_STYLE)
 
@@ -75,6 +97,7 @@ class MainView(FrameViewBase):
 
         # Build Log
         self.log = wx.TextCtrl(self.mainPanel, -1, style=wx.TE_MULTILINE | wx.TE_READONLY | wx.HSCROLL)
+        self.buildLog()
 
         # Event bindings
         self.Bind(wx.EVT_CHOICE, self.e_OnHostSelect, self.host)
@@ -122,6 +145,13 @@ class MainView(FrameViewBase):
         self.updateTree()
         # self.tree.GetMainWindow().Bind(wx.EVT_RIGHT_UP, self.e_OnRightClick)
         self.tree.Bind(wx.EVT_TREE_SEL_CHANGED, self.e_OnTreeSelect)
+
+    def buildLog(self):
+        # Create handler for logger
+        self.logger.addHandler(WxLogHandler(self.log))
+        self.logger.setLevel(logging.DEBUG)
+
+        self.logger.info("Logger attached")
 
     def updateHostSelector(self):
         selected = self.host.GetStringSelection()
@@ -271,18 +301,43 @@ class MainView(FrameViewBase):
         self._loadContentPanel(new_panel, "Scripts")
 
     def _handleEvent(self, event):
-        if event.event == events.EventCodes.manager.heartbeat:
-            self.handleEvent_heartbeat(event)
+        self.logger.debug("[EVENT] - %s - %s", event.hostname, event.event)
 
-        elif event.event in [events.EventCodes.resource.created, events.EventCodes.resource.destroyed]:
-            self.updateTree()
-
-        elif event.event in [events.EventCodes.resource.changed, events.EventCodes.resource.driver_loaded,
-                             events.EventCodes.resource.driver_unloaded]:
+        if event.event in [labtronyx.EventCodes.manager.heartbeat]:
             pass
 
-    def handleEvent_heartbeat(self, event):
-        # dlg = wx.MessageDialog(self, 'Heartbeat', 'Heartbeat', wx.OK|wx.ICON_INFORMATION)
-        # dlg.ShowModal()
-        # dlg.Destroy()
-        pass
+        elif event.event in [labtronyx.EventCodes.resource.created,
+                             labtronyx.EventCodes.resource.destroyed]:
+            self.updateTree()
+
+        elif event.event in [labtronyx.EventCodes.script.created,
+                             labtronyx.EventCodes.script.destroyed]:
+            self.updateTree()
+
+        elif event.event in [labtronyx.EventCodes.interface.created,
+                             labtronyx.EventCodes.interface.destroyed]:
+            self.updateTree()
+
+        elif event.event in [labtronyx.EventCodes.resource.changed,
+                             labtronyx.EventCodes.resource.driver_loaded,
+                             labtronyx.EventCodes.resource.driver_unloaded]:
+            pass
+
+
+class WxLogHandler(logging.Handler):
+    def __init__(self, text_control):
+        logging.Handler.__init__(self)
+
+        assert (isinstance(text_control, wx.TextCtrl))
+        self.control = text_control
+
+    def emit(self, record):
+        wx.CallAfter(self.wx_emit, record)
+
+    def wx_emit(self, record):
+        self.control.SetEditable(True)
+
+        message = '\n' + self.format(record)
+        self.control.AppendText(message)
+
+        self.control.SetEditable(False)

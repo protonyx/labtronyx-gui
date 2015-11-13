@@ -2,13 +2,16 @@ __author__ = 'kkennedy'
 
 import wx
 import wx.lib.sized_controls
-from . import FrameViewBase, PanelViewBase, DialogViewBase
 
-from labtronyx.common import events
+import labtronyx
+
+from ..controllers import ResourceController
+from . import FrameViewBase, PanelViewBase, DialogViewBase
 
 
 class ResourceInfoPanel(PanelViewBase):
     def __init__(self, parent, controller):
+        assert(isinstance(controller, ResourceController))
         super(ResourceInfoPanel, self).__init__(parent, controller, id=wx.ID_ANY)
 
         self.mainSizer = wx.FlexGridSizer(cols=2, hgap=5, vgap=5)
@@ -35,8 +38,9 @@ class ResourceInfoPanel(PanelViewBase):
         self.updateFields()
 
     def _handleEvent(self, event):
-        if event.event in [events.EventCodes.resource.driver_loaded, events.EventCodes.resource.driver_unloaded,
-                           events.EventCodes.resource.changed]:
+        if event.event in [labtronyx.EventCodes.resource.driver_loaded,
+                           labtronyx.EventCodes.resource.driver_unloaded,
+                           labtronyx.EventCodes.resource.changed]:
             self.updateFields()
 
     def _createField(self, label, prop_key):
@@ -87,6 +91,7 @@ class ResourceInfoPanel(PanelViewBase):
 
 class DriverLoadDialog(DialogViewBase):
     def __init__(self, parent, controller):
+        assert (isinstance(controller, ResourceController))
         super(DriverLoadDialog, self).__init__(parent, controller, id=wx.ID_ANY, title="Resource %s" % controller.resID)
 
         lbl = wx.StaticText(self, -1, "Load Driver")
@@ -115,6 +120,7 @@ class DriverLoadDialog(DialogViewBase):
     def getSelectedDriver(self):
         return self.drv_select.getSelectedDriver()
 
+
 class DriverSelectorPanel(PanelViewBase):
     """
     Driver Selection Widget
@@ -123,6 +129,7 @@ class DriverSelectorPanel(PanelViewBase):
     :type controller:   controllers.resource.ResourceController
     """
     def __init__(self, parent, controller):
+        assert (isinstance(controller, ResourceController))
         super(DriverSelectorPanel, self).__init__(parent, controller, id=wx.ID_ANY, style=wx.WANTS_CHARS)
 
         vendors = self.controller.manager.list_driver_vendors()

@@ -1,22 +1,9 @@
+from .c_base import BaseController, PluginController
+from .c_resource import ResourceController
+from .c_interface import InterfaceController
+from .c_script import ScriptController
+from .c_manager import ManagerController
+from .c_main import MainApplicationController
 
-class BaseController(object):
-
-    def __init__(self):
-        self._views = []
-
-    def registerView(self, view_obj):
-        self._views.append(view_obj)
-
-    def unregisterView(self, view_obj):
-        self._views.remove(view_obj)
-
-    def notifyViews(self, event):
-        for v in self._views:
-            try:
-                v.handleEvent(event)
-
-            except Exception as e:
-                pass
-
-    def _handleEvent(self, event):
-        pass
+__all__ = ['MainApplicationController', 'ManagerController', 'InterfaceController',
+           'ResourceController', 'ScriptController']
