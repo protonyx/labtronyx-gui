@@ -44,31 +44,29 @@ class ManagerController(BaseController):
 
         # Check if this event is for us
         if event.hostname == self._hostname:
-            if event.event in [labtronyx.EventCodes.resource.changed,
-                               labtronyx.EventCodes.resource.driver_loaded,
-                               labtronyx.EventCodes.resource.driver_unloaded]:
+            if event.event in [labtronyx.EventCodes.resource.created,
+                               labtronyx.EventCodes.resource.destroyed]:
                 self.refresh()
-
-                # Notify resource controllers
-                for res_uuid, res_con in self._resources.items():
-                    res_con._handleEvent(event)
 
             elif event.event in [labtronyx.EventCodes.interface.created,
                                  labtronyx.EventCodes.interface.destroyed]:
                 self.refresh()
 
-                # Notify interface controllers
-                for int_uuid, int_con in self._interfaces.items():
-                    int_con._handleEvent(event)
-
             elif event.event in [labtronyx.EventCodes.script.created,
-                                 labtronyx.EventCodes.script.destroyed,
-                                 labtronyx.EventCodes.script.changed]:
+                                 labtronyx.EventCodes.script.destroyed]:
                 self.refresh()
 
-                # Notify script controllers
-                for scr_uuid, scr_con in self._scripts.items():
-                    scr_con._handleEvent(event)
+            # Notify resource controllers
+            for res_uuid, res_con in self._resources.items():
+                res_con._handleEvent(event)
+
+            # Notify interface controllers
+            for int_uuid, int_con in self._interfaces.items():
+                int_con._handleEvent(event)
+
+            # Notify script controllers
+            for scr_uuid, scr_con in self._scripts.items():
+                scr_con._handleEvent(event)
 
             self.notifyViews(event)
 

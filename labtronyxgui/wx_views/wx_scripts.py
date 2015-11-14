@@ -40,28 +40,62 @@ class ScriptInfoPanel(PanelViewBase):
         # start/stop, status, progress?
         self.btn_do = wx.Button(self, -1, "Do")
         self.txt_state = wx.StaticText(self, -1, "")
+        self.progress = wx.Gauge(self, -1, size=(-1, 25))
         self.Bind(wx.EVT_BUTTON, self.e_OnButton, self.btn_do)
 
         self.midSizer.Add(self.btn_do, 0, wx.ALIGN_LEFT)
         self.midSizer.Add(self.txt_state, 1, wx.ALIGN_LEFT | wx.LEFT | wx.RIGHT, 10)
+        self.midSizer.Add(self.progress, 0, wx.ALIGN_RIGHT)
 
         # Lower section
         # notebook: resources, log, results
 
         self.mainSizer.Add(self.topSizer, 1)
-        self.mainSizer.Add(self.midSizer, 0)
+        self.mainSizer.Add(self.midSizer, 0, wx.EXPAND)
 
         self.SetSizer(self.mainSizer)
         self.SetAutoLayout(True)
         self.mainSizer.Fit(self)
         self.Fit()
 
+        self.update()
+
     def _handleEvent(self, event):
         if event.event in [labtronyx.EventCodes.script.changed]:
             self.update()
 
     def update(self):
-        self.txt_state.SetLabelText(self.controller.properties.get('status'))
+        properties = self.controller.properties
+        results = properties.get('results', [])
+
+        if properties.get('running', False):
+            self.btn_do.SetLabelText('Stop')
+        else:
+            self.btn_do.SetLabelText('Start')
+
+        if properties.get('running', False):
+            self.txt_state.SetLabelText('Running')
+            self.txt_state.SetForegroundColour(wx.YELLOW)
+
+        elif len(results) > 0:
+            last_result = results[-1].get('result', '')
+            if last_result == labtronyx.ScriptResult.PASS:
+                self.txt_state.SetLabelText('PASS')
+                self.txt_state.SetForegroundColour(wx.GREEN)
+
+            elif last_result == labtronyx.ScriptResult.FAIL:
+                self.txt_state.SetLabelText('FAIL')
+                self.txt_state.SetForegroundColour(wx.RED)
+
+            elif last_result == labtronyx.ScriptResult.STOPPED:
+                self.txt_state.SetLabelText('STOPPED')
+                self.txt_state.SetForegroundColour(wx.RED)
+
+        elif properties.get('ready', False):
+            self.txt_state.SetLabelText('Ready')
+            self.txt_state.SetForegroundColour(wx.BLACK)
+
+        self.progress.SetValue(properties.get('progress'))
 
     def _fieldAttributes(self, label, attr_key):
         lblNew = wx.StaticText(self, -1, label + ":")
@@ -80,7 +114,11 @@ class ScriptInfoPanel(PanelViewBase):
         self.param_sizer.Add(txtNew, 1, wx.ALIGN_LEFT | wx.EXPAND)
 
     def e_OnButton(self, event):
-        self.controller.start()
+        properties = self.controller.properties
+        if properties.get('running', False):
+            self.controller.stop()
+        else:
+            self.controller.start()
 
 
 class ScriptParametersDialog(DialogViewBase):

@@ -29,3 +29,6 @@ class ScriptController(PluginController):
 
     def start(self):
         self.model.start()
+
+    def stop(self):
+        self.model.stop()
