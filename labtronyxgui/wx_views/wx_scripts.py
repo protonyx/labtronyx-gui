@@ -48,10 +48,20 @@ class ScriptInfoPanel(PanelViewBase):
         self.midSizer.Add(self.progress, 0, wx.ALIGN_RIGHT)
 
         # Lower section
-        # notebook: resources, log, results
+        self.notebook = wx.Notebook(self, -1, style=wx.BK_DEFAULT)
+        # Resources
+        self.nb_resources = ScriptResourcesPanel(self.notebook, self.controller)
+        self.notebook.AddPage(self.nb_resources, "Resources")
+        # Status/Log
+        self.nb_status = ScriptStatusPanel(self.notebook, self.controller)
+        self.notebook.AddPage(self.nb_status, "Status")
+        # Results
+        self.nb_results = ScriptResultsPanel(self.notebook, self.controller)
+        self.notebook.AddPage(self.nb_results, "Results")
 
-        self.mainSizer.Add(self.topSizer, 1)
-        self.mainSizer.Add(self.midSizer, 0, wx.EXPAND)
+        self.mainSizer.Add(self.topSizer, 0, wx.EXPAND)
+        self.mainSizer.Add(self.midSizer, 0, wx.EXPAND | wx.TOP | wx.BOTTOM, 10)
+        self.mainSizer.Add(self.notebook, 1, wx.EXPAND)
 
         self.SetSizer(self.mainSizer)
         self.SetAutoLayout(True)
@@ -156,3 +166,21 @@ class ScriptParametersDialog(DialogViewBase):
 
 class ScriptParametersPanel(PanelViewBase):
     pass
+
+
+class ScriptResourcesPanel(PanelViewBase):
+    def __init__(self, parent, controller):
+        assert(isinstance(controller, ScriptController))
+        super(ScriptResourcesPanel, self).__init__(parent, controller, id=wx.ID_ANY)
+
+
+class ScriptStatusPanel(PanelViewBase):
+    def __init__(self, parent, controller):
+        assert(isinstance(controller, ScriptController))
+        super(ScriptStatusPanel, self).__init__(parent, controller, id=wx.ID_ANY)
+
+
+class ScriptResultsPanel(PanelViewBase):
+    def __init__(self, parent, controller):
+        assert(isinstance(controller, ScriptController))
+        super(ScriptResultsPanel, self).__init__(parent, controller, id=wx.ID_ANY)
