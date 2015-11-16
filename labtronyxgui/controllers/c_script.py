@@ -1,5 +1,8 @@
 __author__ = 'kkennedy'
 
+import datetime
+from dateutil.relativedelta import relativedelta
+
 import labtronyx
 from . import PluginController
 
@@ -27,8 +30,33 @@ class ScriptController(PluginController):
     def parameters(self):
         return self._parameters
 
+    @property
+    def results(self):
+        return self.properties.get('results')
+
+    @property
+    def log(self):
+        return self.model.getLog()
+
     def start(self):
         self.model.start()
 
     def stop(self):
         self.model.stop()
+
+    def human_time(self, timestamp):
+        dt = datetime.datetime.fromtimestamp(timestamp)
+        return dt.strftime('%x %X')
+
+    def human_time_delta(self, delta):
+        rd = relativedelta(seconds=delta)
+
+        attrs = ['years', 'months', 'days', 'hours', 'minutes', 'seconds']
+        human_readable = ['%d %s' % (getattr(rd, attr), getattr(rd, attr) > 1 and attr or attr[:-1])
+                          for attr in attrs if getattr(rd, attr)]
+
+        if len(human_readable) == 0:
+            return '< 1 second'
+
+        else:
+            return ', '.join(human_readable)

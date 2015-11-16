@@ -335,9 +335,4 @@ class WxLogHandler(logging.Handler):
         wx.CallAfter(self.wx_emit, record)
 
     def wx_emit(self, record):
-        self.control.SetEditable(True)
-
-        message = '\n' + self.format(record)
-        self.control.AppendText(message)
-
-        self.control.SetEditable(False)
+        self.control.AppendText('\n' + self.format(record))
