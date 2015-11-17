@@ -40,6 +40,7 @@ class PluginController(BaseController):
         self.update_properties()
 
         self._uuid = self._properties.get('uuid')
+        self._fqn = self._properties.get('fqn')
 
     def update_properties(self):
         self._properties = self._model.getProperties()
@@ -55,6 +56,10 @@ class PluginController(BaseController):
     @property
     def uuid(self):
         return self._uuid
+
+    @property
+    def fqn(self):
+        return self._fqn
 
     @property
     def properties(self):

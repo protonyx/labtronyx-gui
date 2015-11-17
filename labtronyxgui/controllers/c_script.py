@@ -11,8 +11,8 @@ class ScriptController(PluginController):
     def __init__(self, c_manager, model):
         super(ScriptController, self).__init__(c_manager, model)
 
-        self._attributes = self.model.getAttributes()  # values
-        self._parameters = self.model.getParameterInfo()  # class data
+        self._attributes = self.model.getClassAttributes()  # values
+        self._parameters = self.model.getParameters()  # values
 
     def _handleEvent(self, event):
         # Check that the event was for us
@@ -43,6 +43,15 @@ class ScriptController(PluginController):
 
     def stop(self):
         self.model.stop()
+
+    def resolve_resources(self):
+        self.model.resolveResources()
+
+    def get_resource_info(self):
+        return self.properties.get('resources', {})
+
+    def assign_resource(self, attr_name, uuid):
+        self.model.assignResource(attr_name, uuid)
 
     def human_time(self, timestamp):
         dt = datetime.datetime.fromtimestamp(timestamp)

@@ -121,4 +121,78 @@ class ScriptSummaryPanel(PanelViewBase):
         self.attrSizer.Add(txtNew, 1, wx.ALIGN_LEFT | wx.EXPAND)
 
     def e_OnClick(self, event):
-        self.controller.create_script_instance(self.fqn)
+        if len(self.params) > 0:
+            param_dialog = ScriptParametersDialog(self, self.controller, self.fqn)
+            ret_code = param_dialog.ShowModal()
+
+            if ret_code != wx.ID_OK:
+                return
+
+            params = param_dialog.getParams()
+
+        else:
+            params = {}
+
+        self.controller.create_script_instance(self.fqn, **params)
+
+
+class ScriptParametersDialog(DialogViewBase):
+    def __init__(self, parent, controller, fqn):
+        assert (isinstance(controller, ManagerController))
+        super(ScriptParametersDialog, self).__init__(parent, controller, id=wx.ID_ANY, title="Script Parameters")
+
+        self.attributes = self.controller.attributes.get(fqn, {})
+        self.params = self.attributes.get('parameters')
+        self._fields = {}
+
+        lbl = wx.StaticText(self, -1, "Open Script")
+        lbl.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD))
+
+        btnOk = wx.Button(self, wx.ID_OK, "&Ok")
+        btnOk.SetDefault()
+        btnCancel = wx.Button(self, wx.ID_CANCEL, "&Cancel")
+
+        btnSizer = wx.StdDialogButtonSizer()
+        btnSizer.AddButton(btnOk)
+        btnSizer.AddButton(btnCancel)
+        btnSizer.Realize()
+
+        self.paramSizer = wx.BoxSizer(wx.VERTICAL)
+        for param_attr, param_info in self.params.items():
+            self._createField(param_attr)
+
+        mainSizer = wx.BoxSizer(wx.VERTICAL)
+        mainSizer.Add(lbl, 0, wx.EXPAND | wx.ALL, border=5)
+        mainSizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.ALL, border=5)
+        mainSizer.Add(self.paramSizer, 0, wx.EXPAND | wx.ALL, border=5)
+        mainSizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.ALL, border=5)
+        mainSizer.Add(btnSizer, 0, wx.ALL | wx.ALIGN_RIGHT, border=5)
+
+        self.SetSizer(mainSizer)
+        mainSizer.Fit(self)
+
+    def _createField(self, param_attr):
+        param_info = self.params.get(param_attr)
+
+        fieldSizer = wx.BoxSizer(wx.HORIZONTAL)
+        lbl_attr = wx.StaticText(self, -1, param_attr, size=(150, -1))
+        lbl_desc = wx.StaticText(self, -1, param_info.get('description'), size=(150, -1))
+        lbl_desc.SetFont(wx.Font(8, wx.DEFAULT, wx.ITALIC, wx.NORMAL))
+        lbl_desc.Wrap(150)
+        txt_val = wx.TextCtrl(self, -1, size=(150, -1))
+        self._fields[param_attr] = txt_val
+
+        descSizer = wx.BoxSizer(wx.VERTICAL)
+        descSizer.Add(lbl_attr, 0)
+        descSizer.Add(lbl_desc, 0)
+        fieldSizer.Add(descSizer, 0, wx.ALIGN_LEFT | wx.EXPAND)
+        fieldSizer.Add(txt_val, 1, wx.ALIGN_RIGHT)
+        self.paramSizer.Add(fieldSizer, 0, wx.EXPAND | wx.ALL, 5)
+
+    def getParams(self):
+        params = {}
+
+        for fieldname, field_ctrl in self._fields.items():
+            params[fieldname] = field_ctrl.GetValue()
+
+        return params

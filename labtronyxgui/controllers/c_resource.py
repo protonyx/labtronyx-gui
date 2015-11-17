@@ -28,6 +28,10 @@ class ResourceController(PluginController):
     def resID(self):
         return self._resID
 
+    @property
+    def driver(self):
+        return self.properties.get('driver')
+
     def load_driver(self, new_driver):
         return self._model.loadDriver(new_driver)
 

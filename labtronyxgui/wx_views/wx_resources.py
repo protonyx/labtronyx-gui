@@ -20,7 +20,7 @@ class ResourceInfoPanel(PanelViewBase):
 
         # Controls
         self._createField("Resource ID", "resourceID")
-        self._createField("Interface", "interface")
+        self._createField("Interface", "interfaceName")
         self._createField("Resource Type", "resourceType")
         self._createField("Device Type", "deviceType")
         self._createField("Driver", "driver")

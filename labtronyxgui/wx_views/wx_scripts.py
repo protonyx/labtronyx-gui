@@ -1,5 +1,6 @@
 import sys
 import wx
+from wx.lib import scrolledpanel
 
 import labtronyx
 
@@ -109,66 +110,149 @@ class ScriptInfoPanel(PanelViewBase):
             self.controller.start()
 
 
-class ScriptParametersDialog(DialogViewBase):
-    def __init__(self, parent, controller=None):
-        assert (isinstance(controller, ScriptController))
-        super(ScriptParametersDialog, self).__init__(parent, controller, id=wx.ID_ANY, title="Script Parameters")
-
-        if self.controller is None:
-            lbl = wx.StaticText(self, -1, "Open Script")
-        else:
-            lbl = wx.StaticText(self, -1, "Script")
-        lbl.SetFont(wx.Font(12, wx.SWISS, wx.NORMAL, wx.BOLD))
-
-        self.pnl_main = ScriptParametersPanel(self, self.controller)
-
-        btnOk = wx.Button(self, wx.ID_OK, "&Ok")
-        btnOk.SetDefault()
-        btnCancel = wx.Button(self, wx.ID_CANCEL, "&Cancel")
-
-        btnSizer = wx.StdDialogButtonSizer()
-        btnSizer.AddButton(btnOk)
-        btnSizer.AddButton(btnCancel)
-        btnSizer.Realize()
-
-        mainSizer = wx.BoxSizer(wx.VERTICAL)
-        mainSizer.Add(lbl, 0, wx.EXPAND | wx.ALL, border=5)
-        mainSizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.ALL, border=5)
-        mainSizer.Add(self.pnl_main, 0, wx.EXPAND | wx.ALL, border=5)
-        mainSizer.Add(wx.StaticLine(self), 0, wx.EXPAND | wx.ALL, border=5)
-        mainSizer.Add(btnSizer, 0, wx.ALL | wx.ALIGN_RIGHT, border=5)
-
-        self.SetSizer(mainSizer)
-        mainSizer.Fit(self)
-
-
 class ScriptParametersPanel(PanelViewBase):
     def __init__(self, parent, controller):
         assert(isinstance(controller, ScriptController))
         super(ScriptParametersPanel, self).__init__(parent, controller, id=wx.ID_ANY)
 
-        self.param_info = self.controller.parameters
-        self.param_sizer = wx.FlexGridSizer(cols=2, hgap=5, vgap=5)
+        self.mainSizer = wx.BoxSizer(wx.VERTICAL)
+        self.sp = scrolledpanel.ScrolledPanel(self)
+
+        self.param_info = self.controller.attributes.get('parameters')
+        self.params = self.controller.parameters
+
+        self.paramSizer = wx.BoxSizer(wx.VERTICAL)
+
+        if len(self.param_info) == 0:
+            self.paramSizer.Add(wx.StaticText(self.sp, -1, 'No parameters'), 0)
 
         for param, param_details in self.param_info.items():
-            self._fieldParameters(param, param)
+            self._fieldParameters(param)
+            self.paramSizer.Add(wx.StaticLine(self.sp, style=wx.LI_HORIZONTAL), 0, wx.EXPAND | wx.ALL, 5)
 
-        self.param_sizer.AddGrowableCol(1)
-        self.SetSizer(self.param_sizer)
+        self.sp.SetSizer(self.paramSizer)
+        self.sp.SetAutoLayout(True)
+        self.sp.SetupScrolling()
 
-    def _fieldParameters(self, label, prop_key):
-        lblNew = wx.StaticText(self, -1, label + ":")
-        value = self.props.get(prop_key) or ''
-        txtNew = wx.StaticText(self, -1, value)
+        self.mainSizer.Add(self.sp, 1, wx.EXPAND)
+        self.SetSizer(self.mainSizer)
 
-        self.param_sizer.Add(lblNew, 0, wx.ALIGN_RIGHT | wx.RIGHT, 5)
-        self.param_sizer.Add(txtNew, 1, wx.ALIGN_LEFT | wx.EXPAND)
+    def _fieldParameters(self, param_attr):
+        param_info = self.param_info.get(param_attr)
+
+        fieldSizer = wx.BoxSizer(wx.HORIZONTAL)
+        lbl_attr = wx.StaticText(self.sp, -1, param_attr)
+        lbl_attr.Wrap(200)
+        lbl_desc = wx.StaticText(self.sp, -1, param_info.get('description'))
+        lbl_desc.SetFont(wx.Font(8, wx.DEFAULT, wx.ITALIC, wx.NORMAL))
+        lbl_desc.Wrap(200)
+        txt_val = wx.StaticText(self.sp, -1, self.params.get(param_attr), style=wx.ALIGN_RIGHT)
+        txt_val.Wrap(200)
+
+        descSizer = wx.BoxSizer(wx.VERTICAL)
+        descSizer.Add(lbl_attr, 0)
+        descSizer.Add(lbl_desc, 0)
+        fieldSizer.Add(descSizer, 1, wx.ALIGN_LEFT | wx.EXPAND)
+        fieldSizer.Add(txt_val, 1, wx.ALIGN_RIGHT | wx.EXPAND)
+        self.paramSizer.Add(fieldSizer, 0, wx.EXPAND | wx.ALL, 5)
 
 
 class ScriptResourcesPanel(PanelViewBase):
     def __init__(self, parent, controller):
         assert(isinstance(controller, ScriptController))
         super(ScriptResourcesPanel, self).__init__(parent, controller, id=wx.ID_ANY)
+
+        self.spSizer = wx.BoxSizer(wx.VERTICAL)
+        self.sp = scrolledpanel.ScrolledPanel(self)
+
+        res_info = self.controller.get_resource_info()
+        self.mainSizer = wx.BoxSizer(wx.VERTICAL)
+
+        self.btn_reset = wx.Button(self.sp, -1, "Reset")
+        self.Bind(wx.EVT_BUTTON, self.e_OnClick, self.btn_reset)
+
+        self.mainSizer.Add(self.btn_reset, 0, wx.ALL, 5)
+
+        for attr_name, res_list in res_info.items():
+            res_ctrl = ScriptResourceSelector(self.sp, self.controller, attr_name)
+            self.mainSizer.Add(wx.StaticLine(self.sp, style=wx.LI_HORIZONTAL), 0, wx.EXPAND | wx.ALL, 5)
+            self.mainSizer.Add(res_ctrl, 0, wx.EXPAND | wx.ALL, 5)
+
+        self.sp.SetAutoLayout(True)
+        self.sp.SetupScrolling()
+        self.sp.SetSizer(self.mainSizer)
+
+        self.spSizer.Add(self.sp, 1, wx.EXPAND)
+        self.SetSizer(self.spSizer)
+
+    def e_OnClick(self, event):
+        self.controller.resolve_resources()
+
+
+class ScriptResourceSelector(PanelViewBase):
+    def __init__(self, parent, controller, attr_name):
+        assert(isinstance(controller, ScriptController))
+        super(ScriptResourceSelector, self).__init__(parent, controller, id=wx.ID_ANY)
+
+        self.attr_name = attr_name
+        self.res_cons = []
+
+        self.mainSizer = wx.BoxSizer(wx.HORIZONTAL)
+        self.attrSizer = wx.BoxSizer(wx.VERTICAL)
+
+        self.txt_attr = wx.StaticText(self, -1, "Resource Attribute: %s" % attr_name)
+        self.txt_res = wx.StaticText(self, -1, '')
+        self.res_picker = wx.Choice(self, -1)
+        self.btn = wx.Button(self, -1, 'Use')
+        self.Bind(wx.EVT_BUTTON, self.e_OnClick, self.btn)
+
+        self.attrSizer.Add(self.txt_attr, 0, wx.ALIGN_LEFT)
+        self.attrSizer.Add(self.txt_res, 0, wx.ALIGN_LEFT)
+        self.mainSizer.Add(self.attrSizer, 1)
+        self.mainSizer.Add(self.res_picker, 0, wx.ALIGN_RIGHT | wx.ALIGN_CENTER_VERTICAL)
+        self.mainSizer.Add(self.btn, 0, wx.LEFT | wx.ALIGN_CENTER_VERTICAL, 10)
+        self.SetSizer(self.mainSizer)
+
+        self.update()
+
+    def _handleEvent(self, event):
+        if event.event in [labtronyx.EventCodes.script.changed]:
+            self.update()
+
+    def update(self):
+        self.res_picker.Clear()
+
+        res_info = self.controller.get_resource_info().get(self.attr_name, [])
+
+        self.res_cons = [self.controller.manager.get_resource(uuid)
+                             for uuid in res_info]
+
+        for res_cont in self.res_cons:
+            if res_cont.driver is not None:
+                txt_display = res_cont.properties.get('deviceVendor', '') + ' ' + \
+                              res_cont.properties.get('deviceModel', '')
+
+            else:
+                txt_display = res_cont.resID
+
+            self.res_picker.Append(txt_display)
+
+        if len(res_info) == 1:
+            # Resolved
+            self.btn.Disable()
+            self.res_picker.SetSelection(0)
+            self.res_picker.Disable()
+
+        else:
+            # Not resolved
+            self.btn.Enable()
+            self.res_picker.Enable()
+
+    def e_OnClick(self, event):
+        sel_res = self.res_picker.GetCurrentSelection()
+
+        sel_res_uuid = self.res_cons[sel_res]
+        self.controller.assign_resource(self.attr_name, sel_res_uuid)
 
 
 class ScriptStatusPanel(PanelViewBase):
@@ -212,6 +296,7 @@ class ScriptStatusPanel(PanelViewBase):
         self.log.SetEditable(True)
         self.log.SetLabelText(log_txt)
         self.log.SetEditable(False)
+
 
 class ScriptResultsPanel(PanelViewBase):
     def __init__(self, parent, controller):
@@ -258,6 +343,7 @@ class ScriptResultsPanel(PanelViewBase):
         self.list.SetColumnWidth(3, 135)
 
         self.list.Thaw()
+
 
 class ResultListCtrl(wx.ListCtrl):
     pass

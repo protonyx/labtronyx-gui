@@ -192,6 +192,9 @@ class ManagerController(BaseController):
     def list_resources(self):
         return self._resources.keys()
 
+    def get_script_class_attributes(self, script_fqn):
+        pass
+
     def get_script_attributes(self):
         return {plug_uuid: plug_attr for plug_uuid, plug_attr in self.attributes.items()
                                      if plug_attr.get('pluginType') == 'script'}

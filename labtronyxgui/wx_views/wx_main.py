@@ -20,6 +20,7 @@ from ..controllers import MainApplicationController
 # View Imports
 from . import FrameViewBase, PanelViewBase, DialogViewBase
 from . import ScriptBrowserPanel, ScriptInfoPanel
+from . import InterfaceInfoPanel
 from . import ResourceInfoPanel
 
 
@@ -242,7 +243,7 @@ class MainView(FrameViewBase):
                     self.loadResourcePanel(item_data)
 
                 elif item_props.get('pluginType') == 'interface':
-                    self.clearContentPanel()
+                    self.loadInterfacePanel(item_data)
 
                 elif item_props.get('pluginType') == 'script':
                     self.loadScriptPanel(item_data)
@@ -274,6 +275,15 @@ class MainView(FrameViewBase):
         # panel.SetSize(self.pnl_content.GetSize())
 
         self.pnl_content.Thaw()
+
+    def loadInterfacePanel(self, int_uuid):
+        host_controller = self.get_selected_host_controller()
+        int_controller = host_controller.get_interface(int_uuid)
+
+        # Build panel
+        self.clearContentPanel()
+        int_panel = InterfaceInfoPanel(self.pnl_content, int_controller)
+        self._loadContentPanel(int_panel, "Interface Details")
 
     def loadResourcePanel(self, res_uuid):
         host_controller = self.get_selected_host_controller()
