@@ -14,23 +14,34 @@ class ResourceInfoPanel(PanelViewBase):
         assert(isinstance(controller, ResourceController))
         super(ResourceInfoPanel, self).__init__(parent, controller, id=wx.ID_ANY)
 
-        self.mainSizer = wx.FlexGridSizer(cols=2, hgap=5, vgap=5)
         self._fields = {}
-        self.props = {}
 
-        # Controls
+        self.mainSizer = wx.BoxSizer(wx.VERTICAL)
+        self.topSizer = wx.BoxSizer(wx.HORIZONTAL)
+
+        self.leftSizer = wx.FlexGridSizer(cols=2, hgap=5, vgap=5)
         self._createField("Resource ID", "resourceID")
         self._createField("Interface", "interfaceName")
         self._createField("Resource Type", "resourceType")
         self._createField("Device Type", "deviceType")
         self._createField("Driver", "driver")
 
+        self.rightSizer = wx.BoxSizer(wx.VERTICAL)
+        self.lst_methods = wx.ListBox(self, -1, style=wx.LB_SINGLE)
+        self.rightSizer.Add(wx.StaticText(self, -1, 'Methods', style=wx.ALIGN_CENTER),
+                            0, wx.ALIGN_CENTER | wx.EXPAND | wx.BOTTOM, 5)
+        self.rightSizer.Add(self.lst_methods, 0, wx.EXPAND)
+
         self.btn_driver = wx.Button(self, -1, "Driver")
-        self.mainSizer.Add((10, 10))
-        self.mainSizer.Add(self.btn_driver, 0, wx.ALIGN_LEFT)
+        self.leftSizer.Add((10, 10))
+        self.leftSizer.Add(self.btn_driver, 0, wx.ALIGN_LEFT)
         self.Bind(wx.EVT_BUTTON, self.e_DriverOnClick, self.btn_driver)
 
-        self.mainSizer.AddGrowableCol(1)
+        self.leftSizer.AddGrowableCol(1)
+
+        self.topSizer.Add(self.leftSizer, 1, wx.ALIGN_LEFT | wx.EXPAND)
+        self.topSizer.Add(self.rightSizer, 1, wx.ALIGN_RIGHT | wx.EXPAND)
+        self.mainSizer.Add(self.topSizer, 0, wx.EXPAND)
 
         self.SetSizer(self.mainSizer)
         self.SetAutoLayout(True)
@@ -47,27 +58,33 @@ class ResourceInfoPanel(PanelViewBase):
         lblNew = wx.StaticText(self, -1, label + ":")
         self._fields[prop_key] = wx.StaticText(self, -1, "")
 
-        self.mainSizer.Add(lblNew,                 0, wx.ALIGN_RIGHT|wx.RIGHT, 5)
-        self.mainSizer.Add(self._fields[prop_key], 1, wx.ALIGN_LEFT|wx.EXPAND)
+        self.leftSizer.Add(lblNew, 0, wx.ALIGN_RIGHT | wx.RIGHT, 5)
+        self.leftSizer.Add(self._fields[prop_key], 1, wx.ALIGN_LEFT | wx.EXPAND)
 
     def updateFields(self):
-        self.props = self.controller.properties
+        props = self.controller.properties
 
         for prop_key, field in self._fields.items():
-            field.SetLabelText(self.props.get(prop_key, ''))
+            field.SetLabelText(props.get(prop_key, ''))
 
-        if self.props.get('driver', '') == '':
+        if props.get('driver', '') == '':
             self.btn_driver.SetLabelText("Load Driver")
 
         else:
             self.btn_driver.SetLabelText("Unload Driver")
 
         # Refresh panel since item lengths may have changed
-        self.mainSizer.Fit(self)
+        self.leftSizer.Fit(self)
+
+        methods = self.controller.get_methods()
+
+        self.lst_methods.Clear()
+        self.lst_methods.AppendItems(methods)
+
         self.Fit()
 
     def e_DriverOnClick(self, event):
-        if self.props.get('driver', '') == '':
+        if self.controller.properties.get('driver', '') == '':
             # Open load driver panel as a dialogue
             drv_dlg = DriverLoadDialog(self, self.controller)
             # drv_dlg.CenterOnScreen()

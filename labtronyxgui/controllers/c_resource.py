@@ -32,6 +32,9 @@ class ResourceController(PluginController):
     def driver(self):
         return self.properties.get('driver')
 
+    def get_methods(self):
+        return self.model._getMethods()
+
     def load_driver(self, new_driver):
         return self._model.loadDriver(new_driver)
 
